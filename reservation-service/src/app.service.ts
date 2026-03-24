@@ -16,15 +16,30 @@ export class AppService {
     const nextInLine = await this.resModel.findOne({ bookId: data.bookId, status: 'WAITING' }).sort({ createdAt: 1 });
     if (nextInLine) {
       nextInLine.status = 'FULFILLED';
+      // Set expiration strictly to 3 days from now
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 3);
+      nextInLine.expiresAt = expiry;
+      
       await nextInLine.save();
-      console.log(`[Reservation Fulfilled] Member ${nextInLine.memberId} can now borrow Book ${data.bookId}`);
+      console.log(`[Reservation Fulfilled] Member ${nextInLine.memberId} can now borrow Book ${data.bookId} (Expires: ${expiry.toISOString()})`);
     }
   }
 
   async getAll(): Promise<Reservation[]> { return this.resModel.find().exec(); }
 
+  async getQueueForBook(bookId: string): Promise<Reservation[]> {
+    return this.resModel.find({ bookId, status: 'WAITING' }).sort({ createdAt: 1 }).exec();
+  }
+
   async updateStatus(id: string, status: string): Promise<Reservation> {
-    const res = await this.resModel.findByIdAndUpdate(id, { status }, { new: true });
+    const updateData: any = { status };
+    if (status === 'FULFILLED') {
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 3);
+      updateData.expiresAt = expiry;
+    }
+    const res = await this.resModel.findByIdAndUpdate(id, updateData, { new: true });
     if (!res) throw new NotFoundException('Reservation not found');
     return res;
   }

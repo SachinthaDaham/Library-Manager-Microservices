@@ -10,7 +10,28 @@ const getAuthHeaders = () => {
   };
 };
 
+const logActivity = async (message: string, type: 'INFO' | 'SUCCESS' | 'ALERT' | 'WARNING' = 'INFO', metadata: any = {}) => {
+  try {
+    const userStr = localStorage.getItem('library_user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    await fetch(`${GATEWAY_URL}/notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: user?.id || 'SYSTEM', message, type, metadata }),
+    });
+  } catch (e) {
+    console.error('Failed to log activity:', e);
+  }
+};
+
 export const api = {
+  // --- USERS ---
+  async getUsers(): Promise<any[]> {
+    const res = await fetch(`${GATEWAY_URL}/auth/users`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch users');
+    return res.json();
+  },
+
   // --- BORROWS ---
   async getBorrows(): Promise<BorrowRecord[]> {
     const res = await fetch(`${GATEWAY_URL}/borrows`, { headers: getAuthHeaders() });
@@ -34,7 +55,9 @@ export const api = {
       const error = await res.json();
       throw new Error(error.message || 'Failed to borrow book');
     }
-    return res.json();
+    const result = await res.json();
+    logActivity(`A new checkout was processed for Book ${data.bookId}.`, 'INFO', { bookId: data.bookId, memberId: data.memberId });
+    return result;
   },
 
   async returnBook(id: string, data: ReturnBorrowDto): Promise<BorrowRecord> {
@@ -64,7 +87,9 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to create book');
-    return res.json();
+    const result = await res.json();
+    logActivity(`A new book "${data.title}" was added to the library catalog.`, 'SUCCESS', { bookId: result._id });
+    return result;
   },
 
   async updateBook(id: string, data: Partial<Book>): Promise<Book> {
@@ -80,11 +105,30 @@ export const api = {
   async deleteBook(id: string): Promise<void> {
     const res = await fetch(`${GATEWAY_URL}/books/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to delete book');
+    logActivity(`Book with ID ${id} was permanently removed from the catalog.`, 'WARNING', { bookId: id });
   },
 
   // --- FINES ---
+  async createFine(data: { memberId: string; borrowId: string }): Promise<Fine> {
+    const res = await fetch(`${GATEWAY_URL}/fines`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create fine');
+    const result = await res.json();
+    logActivity(`A manual system fine was applied.`, 'ALERT', { borrowId: data.borrowId, memberId: data.memberId });
+    return result;
+  },
+
   async getFines(): Promise<Fine[]> {
     const res = await fetch(`${GATEWAY_URL}/fines`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch fines');
+    return res.json();
+  },
+
+  async getFinesByMember(memberId: string): Promise<Fine[]> {
+    const res = await fetch(`${GATEWAY_URL}/fines/member/${memberId}`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch fines');
     return res.json();
   },
@@ -92,18 +136,27 @@ export const api = {
   async payFine(id: string): Promise<Fine> {
     const res = await fetch(`${GATEWAY_URL}/fines/${id}/pay`, { method: 'PUT', headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to pay fine');
-    return res.json();
+    const result = await res.json();
+    logActivity(`System fine was successfully paid off.`, 'SUCCESS', { memberId: result.memberId });
+    return result;
   },
 
   async deleteFine(id: string): Promise<void> {
     const res = await fetch(`${GATEWAY_URL}/fines/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to delete fine');
+    logActivity(`A manual system fine record was deleted.`, 'WARNING');
   },
 
   // --- RESERVATIONS ---
   async getReservations(): Promise<Reservation[]> {
     const res = await fetch(`${GATEWAY_URL}/reservations`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch reservations');
+    return res.json();
+  },
+
+  async getQueueForBook(bookId: string): Promise<Reservation[]> {
+    const res = await fetch(`${GATEWAY_URL}/reservations/book/${bookId}/queue`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch reservation queue');
     return res.json();
   },
 
@@ -114,12 +167,27 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to reserve book');
-    return res.json();
+    const result = await res.json();
+    logActivity(`A hold was successfully placed for Book ${data.bookId}.`, 'INFO', { bookId: data.bookId, memberId: data.memberId });
+    return result;
+  },
+
+  async fulfillReservation(id: string): Promise<Reservation> {
+    const res = await fetch(`${GATEWAY_URL}/reservations/${id}/status`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status: 'FULFILLED' }),
+    });
+    if (!res.ok) throw new Error('Failed to fulfill reservation');
+    const result = await res.json();
+    logActivity(`Hold Queue reservation was manually fulfilled. Ready for pickup!`, 'SUCCESS', { bookId: result.bookId, memberId: result.memberId });
+    return result;
   },
 
   async cancelReservation(id: string): Promise<void> {
     const res = await fetch(`${GATEWAY_URL}/reservations/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to cancel reservation');
+    logActivity(`A hold reservation in the queue was cancelled.`, 'WARNING');
   },
 
   // --- NOTIFICATIONS ---

@@ -3,3 +3,8 @@ dist/
 .env
 .DS_Store
 *.log
+*_logs.txt
+status*.txt
+diff.txt
+status_full.txt
+status_short.txt

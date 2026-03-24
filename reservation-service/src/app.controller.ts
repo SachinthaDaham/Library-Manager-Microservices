@@ -26,6 +26,12 @@ export class AppController {
     return this.appService.getAll();
   }
 
+  @Get('book/:bookId/queue')
+  @ApiOperation({ summary: 'Get reservation queue for a specific book' })
+  getQueueForBook(@Param('bookId') bookId: string) {
+    return this.appService.getQueueForBook(bookId);
+  }
+
   @Put(':id/status')
   @ApiOperation({ summary: 'Update reservation status' })
   updateStatus(@Param('id') id: string, @Body('status') status: string) {

@@ -28,18 +28,19 @@ export const LoginPage = ({ onGoToRegister }: LoginPageProps) => {
       {/* Left panel — decorative */}
       <div style={{
         width: '45%',
-        background: 'linear-gradient(160deg, #1a0a3d 0%, #0d1629 40%, #071222 100%)',
+        background: 'linear-gradient(160deg, var(--primary-light) 0%, rgba(255,255,255,0.8) 100%)',
         padding: '4rem',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        borderRight: '1px solid rgba(139,92,246,0.1)',
+        borderRight: '1px solid var(--border)',
+        backdropFilter: 'blur(10px)',
       }}>
         {/* Decorative circles */}
-        <div style={{ position:'absolute', top:'-80px', left:'-80px', width:'320px', height:'320px', borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.25),transparent 70%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:'-60px', right:'-60px', width:'280px', height:'280px', borderRadius:'50%', background:'radial-gradient(circle, rgba(245,158,11,0.18),transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', top:'-80px', left:'-80px', width:'320px', height:'320px', borderRadius:'50%', background:'radial-gradient(circle, var(--primary-glow), transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'-60px', right:'-60px', width:'280px', height:'280px', borderRadius:'50%', background:'radial-gradient(circle, var(--accent-glow), transparent 70%)', pointerEvents:'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Book icon */}

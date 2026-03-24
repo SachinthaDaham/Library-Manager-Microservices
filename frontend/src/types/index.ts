@@ -1,5 +1,5 @@
 export interface BorrowRecord {
-  id: string;
+  _id: string;
   memberId: string;
   bookId: string;
   borrowDate: string;
@@ -24,7 +24,9 @@ export interface Fine {
   memberId: string;
   borrowId: string;
   amount: number;
+  overdueDays?: number;
   paid: boolean;
+  paidAt?: string;
   createdAt: string;
 }
 
@@ -33,6 +35,7 @@ export interface Reservation {
   memberId: string;
   bookId: string;
   status: 'WAITING' | 'FULFILLED';
+  expiresAt?: string;
   createdAt: string;
 }
 
@@ -40,6 +43,8 @@ export interface NotificationLog {
   _id: string;
   memberId: string;
   message: string;
+  type?: 'INFO' | 'SUCCESS' | 'ALERT' | 'WARNING';
+  metadata?: Record<string, any>;
   read: boolean;
   createdAt: string;
 }

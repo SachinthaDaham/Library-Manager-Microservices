@@ -56,8 +56,7 @@ export const RegisterPage = ({ onGoToLogin }: RegisterPageProps) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--bg-base)',
-      backgroundImage: 'radial-gradient(ellipse 80% 50% at 30% 0%, rgba(109,40,217,0.15),transparent), radial-gradient(ellipse 60% 40% at 85% 90%, rgba(245,158,11,0.1),transparent)',
+      background: 'transparent',
       padding: '2rem',
     }}>
       <div style={{ width: '100%', maxWidth: '520px' }}>

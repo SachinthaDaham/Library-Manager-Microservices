@@ -11,5 +11,8 @@ export class Reservation extends Document {
 
   @Prop({ required: true, default: 'WAITING' })
   status: string; // WAITING, FULFILLED
+
+  @Prop({ default: null })
+  expiresAt: Date;
 }
 export const ReservationSchema = SchemaFactory.createForClass(Reservation);

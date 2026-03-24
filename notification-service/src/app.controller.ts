@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -18,6 +18,12 @@ export class AppController {
   async handleBookReturned(@Payload() data: any) {
     console.log(`[Event Received] Book Returned: Sending resolution email to member: ${data.memberId}`);
     return this.appService.notifyReturn(data);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a generic notification log directly' })
+  createNotification(@Body() body: { memberId?: string; message: string; type?: string; metadata?: any }) {
+    return this.appService.createLog(body);
   }
 
   @Get()

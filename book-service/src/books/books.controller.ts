@@ -10,7 +10,7 @@ export class BooksController {
   @Post()
   @ApiOperation({ summary: 'Add a new book to the catalog' })
   async create(@Body() createDto: any) {
-    if (!createDto.isbn || !createDto.title || !createDto.author || !createDto.genre || !createDto.totalCopies) {
+    if (!createDto.title || !createDto.author || !createDto.genre || !createDto.totalCopies) {
       throw new BadRequestException('Missing required fields');
     }
     return this.booksService.create(createDto);

@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -46,15 +47,33 @@ export class AuthService {
     return user;
   }
 
+  async getAllUsers() {
+    return this.userModel.find().select('-password -__v').exec();
+  }
+
   async validateById(userId: string) {
     return this.userModel.findById(userId).select('-password');
+  }
+
+  async addPenalty(userId: string) {
+    const user = await this.userModel.findByIdAndUpdate(userId, { $inc: { penaltyPoints: 1 } }, { new: true }).select('-password -__v');
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async removePenalty(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    user.penaltyPoints = Math.max(0, (user.penaltyPoints || 0) - 1);
+    await user.save();
+    return this.userModel.findById(userId).select('-password -__v');
   }
 
   private buildResponse(user: UserDocument) {
     const payload = { sub: user._id, email: user.email, role: user.role, name: user.name };
     return {
       access_token: this.jwtService.sign(payload),
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, penaltyPoints: user.penaltyPoints || 0 },
     };
   }
 }

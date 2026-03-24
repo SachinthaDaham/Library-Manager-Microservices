@@ -7,9 +7,21 @@ import { Book } from './book.schema';
 export class BooksService {
   constructor(@InjectModel(Book.name) private bookModel: Model<Book>) {}
 
+  private generateUniqueIsbn(): string {
+    return `978-${Math.floor(100000000 + Math.random() * 900000000)}`;
+  }
+
   async create(createBookDto: any): Promise<Book> {
-    const existing = await this.bookModel.findOne({ isbn: createBookDto.isbn });
-    if (existing) throw new BadRequestException('A book with this ISBN already exists');
+    let generatedIsbn = this.generateUniqueIsbn();
+    let existing = await this.bookModel.findOne({ isbn: generatedIsbn });
+    
+    // Safety collision loop to guarantee absolute catalog uniqueness
+    while (existing) {
+      generatedIsbn = this.generateUniqueIsbn();
+      existing = await this.bookModel.findOne({ isbn: generatedIsbn });
+    }
+
+    createBookDto.isbn = generatedIsbn;
     createBookDto.availableCopies = createBookDto.totalCopies;
     const newBook = new this.bookModel(createBookDto);
     return newBook.save();

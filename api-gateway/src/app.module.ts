@@ -8,33 +8,58 @@ import { AuthMiddleware } from './auth.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // 1. PUBLIC ROUTES (No Token Required)
+    // 1. PUBLIC ROUTES — Auth and public book browsing (no token needed)
     consumer
-      .apply(createProxyMiddleware({ 
-        target: 'http://localhost:3001', 
+      .apply(createProxyMiddleware({
+        target: 'http://localhost:3001',
         changeOrigin: true,
         pathRewrite: { '^/api/auth': '/auth' }
       }))
-      .forRoutes({ path: '/api/auth/*', method: RequestMethod.ALL });
-
-    // 2. CENTRALIZED JWT VALIDATION
-    consumer
-      .apply(AuthMiddleware)
       .forRoutes(
-        { path: '/api/members/*', method: RequestMethod.ALL },
-        { path: '/api/books/*', method: RequestMethod.ALL },
-        { path: '/api/borrows/*', method: RequestMethod.ALL },
-        { path: '/api/fines/*', method: RequestMethod.ALL },
-        { path: '/api/reservations/*', method: RequestMethod.ALL },
-        { path: '/api/notifications/*', method: RequestMethod.ALL },
+        { path: '/api/auth', method: RequestMethod.ALL },
+        { path: '/api/auth/*', method: RequestMethod.ALL },
       );
 
-    // 3. PROTECTED REVERSE PROXY ROUTES
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true, pathRewrite: { '^/api/members': '/members' } })).forRoutes('/api/members/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } })).forRoutes('/api/books/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3003', changeOrigin: true, pathRewrite: { '^/api/borrows': '/borrows' } })).forRoutes('/api/borrows/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3004', changeOrigin: true, pathRewrite: { '^/api/fines': '/fines' } })).forRoutes('/api/fines/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3005', changeOrigin: true, pathRewrite: { '^/api/reservations': '/reservations' } })).forRoutes('/api/reservations/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3006', changeOrigin: true, pathRewrite: { '^/api/notifications': '/notifications' } })).forRoutes('/api/notifications/*');
+    // Public GET for books (catalog browsing by guests)
+    consumer
+      .apply(createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
+      .forRoutes(
+        { path: '/api/books', method: RequestMethod.GET },
+        { path: '/api/books/*', method: RequestMethod.GET },
+      );
+
+    // 2. JWT validation on protected routes
+    consumer.apply(AuthMiddleware).forRoutes(
+      { path: '/api/books', method: RequestMethod.POST },
+      { path: '/api/books/*', method: RequestMethod.PUT },
+      { path: '/api/books/*', method: RequestMethod.DELETE },
+      { path: '/api/borrows', method: RequestMethod.ALL },
+      { path: '/api/borrows/*', method: RequestMethod.ALL },
+      { path: '/api/fines', method: RequestMethod.ALL },
+      { path: '/api/fines/*', method: RequestMethod.ALL },
+      { path: '/api/reservations', method: RequestMethod.ALL },
+      { path: '/api/reservations/*', method: RequestMethod.ALL },
+      { path: '/api/notifications', method: RequestMethod.ALL },
+      { path: '/api/notifications/*', method: RequestMethod.ALL },
+      { path: '/api/members', method: RequestMethod.ALL },
+      { path: '/api/members/*', method: RequestMethod.ALL },
+    );
+
+    // 3. Protected reverse-proxy routes (base + wildcard)
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
+      .forRoutes(
+        { path: '/api/books', method: RequestMethod.POST },
+        { path: '/api/books/*', method: RequestMethod.ALL },
+      );
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true, pathRewrite: { '^/api/members': '/members' } }))
+      .forRoutes('/api/members', '/api/members/*');
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3003', changeOrigin: true, pathRewrite: { '^/api/borrows': '/borrows' } }))
+      .forRoutes('/api/borrows', '/api/borrows/*');
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3004', changeOrigin: true, pathRewrite: { '^/api/fines': '/fines' } }))
+      .forRoutes('/api/fines', '/api/fines/*');
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3005', changeOrigin: true, pathRewrite: { '^/api/reservations': '/reservations' } }))
+      .forRoutes('/api/reservations', '/api/reservations/*');
+    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3006', changeOrigin: true, pathRewrite: { '^/api/notifications': '/notifications' } }))
+      .forRoutes('/api/notifications', '/api/notifications/*');
   }
 }

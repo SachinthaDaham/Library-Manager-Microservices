@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Body, UseGuards, Request,
+  Controller, Post, Get, Body, UseGuards, Request, Param, Delete
 } from '@nestjs/common';
 import {
   ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody,
@@ -39,5 +39,24 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
+  }
+
+  @Get('users')
+  @ApiOperation({ summary: 'Get all library members globally' })
+  @ApiResponse({ status: 200, description: 'Returns an array of all users.' })
+  getAllUsers() {
+    return this.authService.getAllUsers();
+  }
+
+  @Post('users/:id/penalty')
+  @ApiOperation({ summary: 'Add a penalty point to a user (Service-to-Service)' })
+  addPenalty(@Param('id') userId: string) {
+    return this.authService.addPenalty(userId);
+  }
+
+  @Delete('users/:id/penalty')
+  @ApiOperation({ summary: 'Remove a penalty point from a user' })
+  removePenalty(@Param('id') userId: string) {
+    return this.authService.removePenalty(userId);
   }
 }

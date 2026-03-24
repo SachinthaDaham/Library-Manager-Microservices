@@ -12,8 +12,14 @@ export class Fine extends Document {
   @Prop({ required: true })
   amount: number;
 
+  @Prop({ default: 0 })
+  overdueDays: number;
+
   @Prop({ required: true, default: false })
   paid: boolean;
+
+  @Prop({ default: null })
+  paidAt: Date;
 }
 
 export const FineSchema = SchemaFactory.createForClass(Fine);

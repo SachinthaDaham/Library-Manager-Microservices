@@ -22,6 +22,9 @@ export class User {
 
   @Prop({ required: true, enum: UserRole, default: UserRole.MEMBER })
   role: UserRole;
+
+  @Prop({ default: 0 })
+  penaltyPoints: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -10,14 +10,26 @@ export class AppController {
 
   @EventPattern('book.overdue')
   async handleBookOverdue(@Payload() data: any) {
-    console.log(`[Event Received] Book Overdue. Calculating fine for Borrow ID: ${data.borrowId}`);
+    console.log(`[Event] Book Overdue: auto-fine for Borrow ${data.borrowId}`);
     return this.appService.createFine(data);
   }
 
+  @Post()
+  @ApiOperation({ summary: 'Create a fine directly (admin use)' })
+  createFine(@Body() body: any) {
+    return this.appService.createFine(body);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all fines' })
+  @ApiOperation({ summary: 'Get all fines (admin/librarian view)' })
   getFines() {
     return this.appService.getAllFines();
+  }
+
+  @Get('member/:memberId')
+  @ApiOperation({ summary: 'Get fines for a specific member' })
+  getFinesByMember(@Param('memberId') memberId: string) {
+    return this.appService.getFinesByMember(memberId);
   }
 
   @Put(':id/pay')

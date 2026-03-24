@@ -8,14 +8,34 @@ export class AppService {
   constructor(@InjectModel(NotificationLog.name) private notifModel: Model<NotificationLog>) {}
 
   async notifyOverdue(data: any): Promise<NotificationLog> {
-    const msg = `Your borrow ID ${data.borrowId} is OVERDUE! Please return Book ${data.bookId} immediately.`;
-    const notif = new this.notifModel({ memberId: data.memberId, message: msg });
+    const msg = `Borrow ID ${String(data.borrowId).substring(0,8)} is OVERDUE! Please return Book ${data.bookId} immediately.`;
+    const notif = new this.notifModel({
+      memberId: data.memberId,
+      message: msg,
+      type: 'ALERT',
+      metadata: { borrowId: data.borrowId, bookId: data.bookId }
+    });
     return notif.save();
   }
 
   async notifyReturn(data: any): Promise<NotificationLog> {
-    const msg = `Thank you for returning Book ${data.bookId}. Borrow ID ${data.borrowId} is resolved.`;
-    const notif = new this.notifModel({ memberId: data.memberId, message: msg });
+    const msg = `Thank you for returning Book ${data.bookId}. Borrow ID ${String(data.borrowId).substring(0,8)} is resolved.`;
+    const notif = new this.notifModel({
+      memberId: data.memberId,
+      message: msg,
+      type: 'SUCCESS',
+      metadata: { borrowId: data.borrowId, bookId: data.bookId }
+    });
+    return notif.save();
+  }
+
+  async createLog(data: { memberId?: string, message: string, type?: string, metadata?: any }): Promise<NotificationLog> {
+    const notif = new this.notifModel({
+      memberId: data.memberId || 'SYSTEM',
+      message: data.message,
+      type: data.type || 'INFO',
+      metadata: data.metadata || {}
+    });
     return notif.save();
   }
 

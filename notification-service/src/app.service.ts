@@ -39,7 +39,13 @@ export class AppService {
     return notif.save();
   }
 
-  async getAll(): Promise<NotificationLog[]> { return this.notifModel.find().exec(); }
+  async getAll(): Promise<NotificationLog[]> {
+    return this.notifModel.find().sort({ createdAt: -1 }).exec();
+  }
+
+  async findByMember(memberId: string): Promise<NotificationLog[]> {
+    return this.notifModel.find({ memberId }).sort({ createdAt: -1 }).exec();
+  }
 
   async markAsRead(id: string): Promise<NotificationLog> {
     const notif = await this.notifModel.findByIdAndUpdate(id, { read: true }, { new: true });

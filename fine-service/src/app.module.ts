@@ -7,8 +7,13 @@ import { Fine, FineSchema } from './fine.schema';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost'),
+    ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true }),
+    MongooseModule.forRootAsync({
+      imports: [],
+      useFactory: () => ({
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/library-fine-db',
+      }),
+    }),
     MongooseModule.forFeature([{ name: Fine.name, schema: FineSchema }])
   ],
   controllers: [AppController],

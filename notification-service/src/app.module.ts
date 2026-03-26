@@ -7,8 +7,13 @@ import { NotificationLog, NotificationSchema } from './notification.schema';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost'),
+    ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true }),
+    MongooseModule.forRootAsync({
+      imports: [],
+      useFactory: () => ({
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/library-notification-db',
+      }),
+    }),
     MongooseModule.forFeature([{ name: NotificationLog.name, schema: NotificationSchema }])
   ],
   controllers: [AppController],

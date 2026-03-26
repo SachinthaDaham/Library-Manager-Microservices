@@ -26,15 +26,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session from localStorage on mount
+// Restore and validate session from backend on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('library_token');
-    const storedUser = localStorage.getItem('library_user');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('library_token');
+      if (!storedToken) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/auth/profile`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${storedToken}`
+          }
+        });
+        
+        if (res.ok) {
+          const userProfile = await res.json();
+          setToken(storedToken);
+          setUser(userProfile);
+          localStorage.setItem('library_user', JSON.stringify(userProfile));
+        } else {
+          // Token is invalid/expired
+          localStorage.removeItem('library_token');
+          localStorage.removeItem('library_user');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Auth initialization failed', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common'
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { CreateFineDto } from './dto/create-fine.dto';
 
 @ApiTags('Fines & Penalties')
 @Controller('fines')
@@ -16,8 +17,14 @@ export class AppController {
 
   @Post()
   @ApiOperation({ summary: 'Create a fine directly (admin use)' })
-  createFine(@Body() body: any) {
+  createFine(@Body() body: CreateFineDto) {
     return this.appService.createFine(body);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get fine statistics (total unpaid, paid, outstanding balance)' })
+  getFineStats() {
+    return this.appService.getStats();
   }
 
   @Get()

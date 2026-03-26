@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Reservation, Book } from '../types';
-
 import { useAuth } from '../context/AuthContext';
+import { Clock, BookMarked, User, Search, Trash2, CheckCircle, Plus, BookOpen, AlertCircle } from 'lucide-react';
 
 export function ReservationsList() {
   const { user } = useAuth();
@@ -43,14 +43,16 @@ export function ReservationsList() {
     });
   }, [user]);
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
       await api.cancelReservation(id);
       fetchRes();
     } catch (e: any) { alert(e.message); }
   };
 
-  const handleFulfill = async (id: string) => {
+  const handleFulfill = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
       await api.fulfillReservation(id);
       fetchRes();
@@ -82,146 +84,192 @@ export function ReservationsList() {
     return pos !== -1 ? pos + 1 : null;
   };
 
-  if (loading) return <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>Loading Hold Queue...</div>;
+  if (loading) return (
+    <div className="glass-card" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+      <Clock size={64} style={{ opacity: 0.5, margin: '0 auto 1.5rem', animation: 'calmDrift 3s infinite alternate', color: 'var(--primary)' }} />
+      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading Queue...</p>
+    </div>
+  );
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div style={{ paddingBottom: '2rem' }}>
+      {/* ─── Header ─── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
         <div>
-          <h1 className="dashboard-title">Reservations Queue 🕒</h1>
+          <h1 className="dashboard-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Clock size={36} color="var(--primary)" />
+            Hold <span className="gradient-text">Queue</span>
+          </h1>
           <p className="dashboard-subtitle">Monitor available holds, queue positions, and pickup deadlines.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowResModal(true)}>+ Place Hold</button>
-      </header>
+        <button className="btn btn-primary" onClick={() => setShowResModal(true)} style={{ padding: '0 1.5rem', height: '100%', minHeight: '3.5rem' }}>
+          <Plus size={20} style={{ marginRight: '6px' }} /> Place Hold
+        </button>
+      </div>
 
+      {res.length === 0 ? (
+        <div className="glass-card" style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <BookMarked size={64} style={{ opacity: 0.5, margin: '0 auto 1.5rem' }} />
+          <h3 style={{ fontWeight: 800, fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No Active Reservations</h3>
+          <p style={{ fontSize: '1.1rem' }}>Books you reserve will appear here with their queue positions.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+          {res.map(r => {
+            const bookTitle = bookMap[r.bookId] || 'Unknown Book';
+            const isFulfilled = r.status === 'FULFILLED';
+            const queuePos = getCustomQueuePosition(r);
+            const expiryDate = r.expiresAt ? new Date(r.expiresAt) : null;
+            const isExpired = expiryDate ? expiryDate < new Date() : false;
+
+            return (
+              <div key={r._id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', margin: 0 }}>
+                <div style={{ 
+                  padding: '1.25rem 1.5rem', 
+                  borderBottom: '1px solid var(--border)', 
+                  background: isFulfilled ? 'var(--status-returned-bg)' : 'var(--primary-light)' 
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ 
+                        width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800,
+                        background: isFulfilled ? '#fff' : '#fff',
+                        color: isFulfilled ? 'var(--status-returned)' : 'var(--primary)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                      }}>
+                        {isFulfilled ? <CheckCircle size={20} /> : `#${queuePos || '?'}`}
+                      </div>
+                      <div>
+                        {isFulfilled ? (
+                          <span className="badge status-returned">READY FOR PICKUP</span>
+                        ) : (
+                          <span className="badge status-active">WAITING IN QUEUE</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px' }} title={bookTitle}>
+                    {bookTitle}
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>Ref: {r._id}</div>
+                </div>
+
+                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', flex: 1 }}>
+                    {user?.role !== 'MEMBER' && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.9rem' }}>
+                        <User size={16} color="var(--text-muted)" style={{ marginTop: '2px' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userMap[r.memberId] || 'Unknown User'}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {r.memberId.substring(0,8)}...</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.9rem' }}>
+                      <Clock size={16} color="var(--text-muted)" style={{ marginTop: '2px' }} />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Placed On</div>
+                        <div style={{ color: 'var(--text-muted)' }}>
+                          {new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isFulfilled && expiryDate && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.9rem' }}>
+                        <AlertCircle size={16} color={isExpired ? 'var(--status-overdue)' : '#F59E0B'} style={{ marginTop: '2px' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: isExpired ? 'var(--status-overdue)' : '#F59E0B' }}>
+                            {isExpired ? 'Expired' : 'Expires On'}
+                          </div>
+                          <div style={{ fontWeight: 600, color: isExpired ? 'var(--status-overdue)' : 'var(--text-secondary)' }}>
+                            {expiryDate.toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.8rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                    {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && !isFulfilled && (
+                      <button 
+                        className="btn" 
+                        style={{ flex: 1, background: 'var(--status-returned-bg)', color: 'var(--status-returned)', border: '1px solid rgba(16,185,129,0.2)' }}
+                        onClick={(e) => handleFulfill(r._id, e)}
+                      >
+                        <CheckCircle size={16} /> Fulfill
+                      </button>
+                    )}
+                    {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN' || r.memberId === user?.id) && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ flex: 1, color: 'var(--text-secondary)' }}
+                        onClick={(e) => handleCancel(r._id, e)}
+                      >
+                        <Trash2 size={16} /> Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Place Hold Modal */}
       {showResModal && (
         <div className="modal-overlay" onClick={() => setShowResModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Place Book Hold</h2>
-            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+              <BookMarked size={24} color="var(--primary)" style={{ marginRight: '12px' }} />
+              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Place Book Hold</h2>
+            </div>
+            
+            <form onSubmit={handleCreate}>
               <div className="form-group" style={{ position: 'relative' }}>
-                <label className="form-label">Search Book Title</label>
-                <input
-                  className="form-control"
-                  placeholder="Type to search..."
-                  value={bookSearch}
-                  onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); setTargetBookId(''); }}
-                  onFocus={() => setShowBookDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowBookDropdown(false), 200)}
-                />
+                <label>Search Catalog</label>
+                <div style={{ position: 'relative' }}>
+                  <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    className="form-control"
+                    style={{ paddingLeft: '48px' }}
+                    placeholder="Type book title..."
+                    value={bookSearch}
+                    onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); setTargetBookId(''); }}
+                    onFocus={() => setShowBookDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowBookDropdown(false), 200)}
+                  />
+                </div>
+                
                 {showBookDropdown && filteredBooks.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', zIndex: 10, maxHeight: 150, overflowY: 'auto', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ position: 'absolute', top: '75px', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 20, maxHeight: '250px', overflowY: 'auto', borderRadius: 'var(--radius-sm)' }}>
                     {filteredBooks.map(b => (
                       <div
                         key={b._id}
-                        style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: targetBookId === b._id ? 'var(--primary-light)' : 'transparent', textAlign: 'left' }}
+                        style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--bg-base)', background: targetBookId === b._id ? 'var(--primary-light)' : '#fff', transition: 'background 0.2s' }}
                         onMouseDown={e => { e.preventDefault(); setBookSearch(b.title); setTargetBookId(b._id || ''); setShowBookDropdown(false); }}
                       >
-                        <strong style={{ color: 'var(--text-primary)' }}>{b.title}</strong>{' '}
-                        <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>by {b.author}</span>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{b.title}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', marginTop: '4px' }}>
+                          <User size={12} style={{ marginRight: '4px' }} /> {b.author}
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowResModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Confirm Hold</button>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px' }} onClick={() => setShowResModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }} disabled={!targetBookId}>
+                  Confirm Hold
+                </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {res.length === 0 ? (
-        <div className="glass-card" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '3rem', opacity: 0.5, marginBottom: '1rem' }}>🍃</div>
-          <h3>No active reservations</h3>
-          <p>Your reserved books will appear here.</p>
-        </div>
-      ) : (
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Reservation</th>
-                {user?.role !== 'MEMBER' && <th>Member</th>}
-                <th>Status / Queue Info</th>
-                <th>Placed On</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {res.map(r => {
-                const bookTitle = bookMap[r.bookId] || 'Unknown Book';
-                const isFulfilled = r.status === 'FULFILLED';
-                const queuePos = getCustomQueuePosition(r);
-                const isReady = isFulfilled && r.expiresAt;
-
-                const expiryDate = r.expiresAt ? new Date(r.expiresAt) : null;
-                const isExpired = expiryDate ? expiryDate < new Date() : false;
-
-                return (
-                  <tr key={r._id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--primary)', marginBottom: '4px' }}>{bookTitle}</div>
-                      <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {r._id.substring(0, 8)}...</div>
-                    </td>
-                    
-                    {user?.role !== 'MEMBER' && (
-                      <td>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userMap[r.memberId] || 'User'}</div>
-                        <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.memberId.substring(0, 8)}...</div>
-                      </td>
-                    )}
-
-                    <td>
-                      {isFulfilled ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                          <span className="status-badge status-returned">READY FOR PICKUP</span>
-                          {expiryDate && (
-                            <span style={{ fontSize: '0.8rem', color: isExpired ? 'var(--status-overdue)' : 'var(--text-secondary)' }}>
-                              {isExpired ? '⚠️ Expired' : `Expires: ${expiryDate.toLocaleDateString()}`}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                          <span className="status-badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>WAITING</span>
-                          {queuePos && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                              Queue Position: #{queuePos}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-
-                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                      {new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-
-                    <td style={{ textAlign: 'right' }}>
-                      {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && !isFulfilled && (
-                        <button 
-                          className="btn" 
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', background: 'var(--status-returned-bg)', color: 'var(--status-returned)', border: '1px solid rgba(16,185,129,0.2)', marginRight: '0.5rem' }} 
-                          onClick={() => handleFulfill(r._id)}
-                        >
-                          Ready for Pickup
-                        </button>
-                      )}
-                      {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN' || r.memberId === user?.id) && (
-                        <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={() => handleCancel(r._id)}>
-                          Cancel Hold
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       )}
     </div>

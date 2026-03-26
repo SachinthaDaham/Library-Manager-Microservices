@@ -7,6 +7,7 @@ import { BooksList } from './components/BooksList';
 import { FinesList } from './components/FinesList';
 import { ReservationsList } from './components/ReservationsList';
 import { NotificationsList } from './components/NotificationsList';
+import { AdminUsers } from './components/AdminUsers';
 
 const RoleColors: Record<string, string> = {
   ADMIN: '#A78BFA',
@@ -43,7 +44,10 @@ function AppContent() {
     { id: 'Books', icon: '📖', label: 'Library Catalog' },
     { id: 'Fines', icon: '💰', label: 'System Fines' },
     { id: 'Reservations', icon: '🕒', label: 'Hold Queue' },
-    ...(user.role === 'ADMIN' ? [{ id: 'Notifications', icon: '🔔', label: 'Event Logs' }] : []),
+    ...(user.role === 'ADMIN' ? [
+      { id: 'Users', icon: '👥', label: 'User Management' },
+      { id: 'Notifications', icon: '🔔', label: 'Event Logs' }
+    ] : []),
   ] : [
     { id: 'Books', icon: '📖', label: 'Library Catalog' },
   ];
@@ -113,6 +117,7 @@ function AppContent() {
         {activeTab === 'Fines' && <FinesList />}
         {activeTab === 'Reservations' && <ReservationsList />}
         {activeTab === 'Notifications' && <NotificationsList />}
+        {activeTab === 'Users' && <AdminUsers />}
       </main>
     </div>
   );

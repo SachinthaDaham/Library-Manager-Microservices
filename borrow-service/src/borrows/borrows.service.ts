@@ -28,17 +28,56 @@ export class BorrowsService {
   async create(createBorrowDto: CreateBorrowDto): Promise<Borrow> {
     const { memberId, bookId, loanDurationDays = 14, notes } = createBorrowDto;
 
-    // Check availability
-    try {
-      await firstValueFrom(this.httpService.put(`http://localhost:3002/books/${bookId}/availability`, { action: 'borrow' }));
-    } catch (e: any) {
-      if (e?.response?.status === 404) throw new NotFoundException('Book not found in Catalog.');
-      throw new BadRequestException(e?.response?.data?.message || 'Failed to borrow');
+    // 1. Double Checkout Check
+    const existingActiveBorrow = await this.borrowModel.findOne({ bookId, memberId, status: BorrowStatus.ACTIVE });
+    if (existingActiveBorrow) {
+      throw new BadRequestException(`You are already currently borrowing this book.`);
     }
 
-    const existingActiveBorrow = await this.borrowModel.findOne({ bookId, status: BorrowStatus.ACTIVE });
-    if (existingActiveBorrow) {
-      throw new BadRequestException(`Book "${bookId}" is already borrowed.`);
+    // 2. Penalty Point check via Auth Service
+    try {
+      const userRes = await firstValueFrom(this.httpService.get(`http://localhost:3001/auth/users/${memberId}/penalty-status`));
+      const penaltyPoints = userRes.data.penaltyPoints;
+      if (penaltyPoints >= 3) {
+        throw new BadRequestException('Account restricted: You have reached the maximum penalty points (3). Please pay your outstanding fines to restore borrowing privileges.');
+      }
+    } catch (e: any) {
+      if (e instanceof BadRequestException) throw e;
+      console.error(`Failed to verify user penalty status: ${e.message}`);
+    }
+
+    // 3. Enterprise Reservation & Inventory Check
+    try {
+      const bookRes = await firstValueFrom(this.httpService.get(`http://localhost:3002/books/${bookId}`));
+      const book = bookRes.data;
+
+      if (book.availableCopies <= 0) {
+        throw new BadRequestException('No copies available. Please reserve the book to join the Hold Queue.');
+      }
+
+      // Check active fulfilled holds for this book
+      const holdsRes = await firstValueFrom(this.httpService.get(`http://localhost:3005/reservations/book/${bookId}/holds`));
+      const activeHolds = holdsRes.data || [];
+      const userHasHold = activeHolds.some((h: any) => h.memberId === memberId);
+
+      if (userHasHold) {
+        // Automatically consume their hold ticket since they are checking it out
+        await firstValueFrom(this.httpService.delete(`http://localhost:3005/reservations/book/${bookId}/member/${memberId}/consume`));
+      } else {
+        // They don't have a hold. Are there enough unreserved copies floating around?
+        const totalReservedCopies = activeHolds.length;
+        if (book.availableCopies <= totalReservedCopies) {
+          throw new BadRequestException('All currently available copies are reserved for members in the Hold Queue.');
+        }
+      }
+
+      // 4. Physically checkout the copy from Catalog
+      await firstValueFrom(this.httpService.put(`http://localhost:3002/books/${bookId}/availability`, { action: 'borrow' }));
+    } catch (e: any) {
+      if (e instanceof BadRequestException) throw e;
+      if (e?.response?.status === 404) throw new NotFoundException('Book not found in Catalog.');
+      if (e?.response?.data?.message) throw new BadRequestException(e.response.data.message);
+      throw new BadRequestException('Failed to process checkout logic via microservices');
     }
 
     const dueDate = new Date();
@@ -49,11 +88,26 @@ export class BorrowsService {
   }
 
   /**
-   * Get all borrow records
+   * Get all borrow records (Paginated)
    */
-  async findAll(): Promise<Borrow[]> {
+  async findAll(page: number = 1, limit: number = 20) {
     this.refreshOverdueStatuses();
-    return this.borrowModel.find().exec();
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await Promise.all([
+      this.borrowModel.find().sort({ dueDate: 1 }).skip(skip).limit(limit).exec(),
+      this.borrowModel.countDocuments()
+    ]);
+    
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
   async findOne(id: string): Promise<Borrow> {
@@ -103,23 +157,17 @@ export class BorrowsService {
           1,
           Math.ceil((now.getTime() - record.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
         );
-        const fineRes = await fetch('http://localhost:3004/fines', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        
+        await firstValueFrom(
+          this.httpService.post('http://localhost:3004/fines', {
             memberId: record.memberId,
             borrowId: String(record._id),
             overdueDays,
-          }),
-        });
-        if (!fineRes.ok) {
-          const errBody = await fineRes.json().catch(() => ({}));
-          console.warn(`Fine-service rejected auto-fine: ${errBody?.message}`);
-        } else {
-          console.log(`Auto-fine created for borrow ${record._id} (${overdueDays} days overdue)`);
-        }
-      } catch (err) {
-        console.error('Failed to auto-generate fine on return', err);
+          })
+        );
+        console.log(`Auto-fine created for borrow ${record._id} (${overdueDays} days overdue)`);
+      } catch (err: any) {
+        console.error('Failed to auto-generate fine on return', err?.response?.data || err.message);
       }
     }
 
@@ -129,6 +177,31 @@ export class BorrowsService {
     this.notificationClient.emit('book.returned', payload);
 
     return record;
+  }
+
+  /**
+   * Enterprise Renewal
+   */
+  async renewLoan(id: string): Promise<Borrow> {
+    const record = await this.findOne(id);
+    if (record.status !== BorrowStatus.ACTIVE) {
+      throw new BadRequestException('Only active loans can be renewed.');
+    }
+
+    // Is there a waitlist?
+    try {
+      const queueRes = await firstValueFrom(this.httpService.get(`http://localhost:3005/reservations/book/${record.bookId}/queue`));
+      if (queueRes.data && queueRes.data.length > 0) {
+        throw new BadRequestException('Renewal denied: Another member is currently waiting in the reserve queue for this item.');
+      }
+    } catch (e: any) {
+      if (e instanceof BadRequestException) throw e;
+      console.error('Failed to verify reservation queue for renewal');
+    }
+
+    // Add 7 days to due date
+    record.dueDate = new Date(record.dueDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return record.save();
   }
 
   /**

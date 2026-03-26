@@ -26,10 +26,28 @@ export class AppController {
     return this.appService.getAll();
   }
 
+  @Get('member/:memberId')
+  @ApiOperation({ summary: 'Get reservations for a specific member' })
+  getReservationsByMember(@Param('memberId') memberId: string) {
+    return this.appService.getByMember(memberId);
+  }
+
   @Get('book/:bookId/queue')
   @ApiOperation({ summary: 'Get reservation queue for a specific book' })
   getQueueForBook(@Param('bookId') bookId: string) {
     return this.appService.getQueueForBook(bookId);
+  }
+
+  @Get('book/:bookId/holds')
+  @ApiOperation({ summary: 'Get active fulfilled holds for a specific book' })
+  getHoldsForBook(@Param('bookId') bookId: string) {
+    return this.appService.getHoldsForBook(bookId);
+  }
+
+  @Delete('book/:bookId/member/:memberId/consume')
+  @ApiOperation({ summary: 'Consume a fulfilled hold for a member' })
+  consumeHold(@Param('bookId') bookId: string, @Param('memberId') memberId: string) {
+    return this.appService.consumeHold(bookId, memberId);
   }
 
   @Put(':id/status')

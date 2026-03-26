@@ -102,6 +102,19 @@ export const LoginPage = ({ onGoToRegister }: LoginPageProps) => {
                 {loading ? '⏳ Signing in...' : '🚀 Sign In'}
               </button>
             </form>
+
+            {/* Quick Demo Buttons */}
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1rem', fontWeight: 600 }}>FAST QA DEMO LOGINS</p>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '10px', fontSize: '0.85rem', borderColor: '#A78BFA', color: '#A78BFA', background: 'rgba(167,139,250,0.05)' }} onClick={() => { setEmail('admin@test.com'); setPassword('admin123'); }}>
+                  Fill Admin
+                </button>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '10px', fontSize: '0.85rem', borderColor: 'var(--status-returned)', color: 'var(--status-returned)', background: 'var(--status-returned-bg)' }} onClick={() => { setEmail('member2@test.com'); setPassword('member123'); }}>
+                  Fill Member
+                </button>
+              </div>
+            </div>
           </div>
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>

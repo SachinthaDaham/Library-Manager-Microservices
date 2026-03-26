@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { User, UserDocument } from '../users/user.schema';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -48,7 +50,36 @@ export class AuthService {
   }
 
   async getAllUsers() {
-    return this.userModel.find().select('-password -__v').exec();
+    return this.userModel
+      .find()
+      .select('-password -__v')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async getUserById(id: string) {
+    const user = await this.userModel.findById(id).select('-password -__v');
+    if (!user) throw new NotFoundException(`User ${id} not found.`);
+    return user;
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto) {
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name.trim();
+    if (dto.role !== undefined) updateData.role = dto.role;
+    if (dto.penaltyPoints !== undefined) updateData.penaltyPoints = Math.max(0, dto.penaltyPoints);
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .select('-password -__v');
+    if (!user) throw new NotFoundException(`User ${id} not found.`);
+    return user;
+  }
+
+  async deleteUser(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user) throw new NotFoundException(`User ${id} not found.`);
+    await this.userModel.findByIdAndDelete(id);
   }
 
   async validateById(userId: string) {
@@ -56,7 +87,9 @@ export class AuthService {
   }
 
   async addPenalty(userId: string) {
-    const user = await this.userModel.findByIdAndUpdate(userId, { $inc: { penaltyPoints: 1 } }, { new: true }).select('-password -__v');
+    const user = await this.userModel
+      .findByIdAndUpdate(userId, { $inc: { penaltyPoints: 1 } }, { new: true })
+      .select('-password -__v');
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -73,7 +106,13 @@ export class AuthService {
     const payload = { sub: user._id, email: user.email, role: user.role, name: user.name };
     return {
       access_token: this.jwtService.sign(payload),
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, penaltyPoints: user.penaltyPoints || 0 },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        penaltyPoints: user.penaltyPoints || 0,
+      },
     };
   }
 }

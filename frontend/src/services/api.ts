@@ -16,7 +16,7 @@ const logActivity = async (message: string, type: 'INFO' | 'SUCCESS' | 'ALERT' |
     const user = userStr ? JSON.parse(userStr) : null;
     await fetch(`${GATEWAY_URL}/notifications`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ memberId: user?.id || 'SYSTEM', message, type, metadata }),
     });
   } catch (e) {
@@ -32,9 +32,30 @@ export const api = {
     return res.json();
   },
 
+  async getUserById(id: string): Promise<any> {
+    const res = await fetch(`${GATEWAY_URL}/auth/users/${id}`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch user');
+    return res.json();
+  },
+
+  async updateUser(id: string, data: { name?: string; role?: string; penaltyPoints?: number }): Promise<any> {
+    const res = await fetch(`${GATEWAY_URL}/auth/users/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update user');
+    return res.json();
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    const res = await fetch(`${GATEWAY_URL}/auth/users/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to delete user');
+  },
+
   // --- BORROWS ---
-  async getBorrows(): Promise<BorrowRecord[]> {
-    const res = await fetch(`${GATEWAY_URL}/borrows`, { headers: getAuthHeaders() });
+  async getBorrows(page: number = 1, limit: number = 20): Promise<{ data: BorrowRecord[], meta: any }> {
+    const res = await fetch(`${GATEWAY_URL}/borrows?page=${page}&limit=${limit}`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch borrows');
     return res.json();
   },
@@ -73,10 +94,33 @@ export const api = {
     return res.json();
   },
 
+  async renewBorrow(id: string): Promise<BorrowRecord> {
+    const res = await fetch(`${GATEWAY_URL}/borrows/${id}/renew`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Renewal Failed');
+    }
+    const result = await res.json();
+    logActivity(`A 7-day loan extension was successfully processed.`, 'SUCCESS', { borrowId: id });
+    return result;
+  },
+
   // --- BOOKS ---
   async getBooks(): Promise<Book[]> {
     const res = await fetch(`${GATEWAY_URL}/books`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch books');
+    return res.json();
+  },
+
+  async getBookSearch(q?: string, genre?: string): Promise<Book[]> {
+    const params = new URLSearchParams();
+    if (q) params.append('q', q);
+    if (genre) params.append('genre', genre);
+    const res = await fetch(`${GATEWAY_URL}/books/search?${params.toString()}`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to search books');
     return res.json();
   },
 
@@ -130,6 +174,12 @@ export const api = {
   async getFinesByMember(memberId: string): Promise<Fine[]> {
     const res = await fetch(`${GATEWAY_URL}/fines/member/${memberId}`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch fines');
+    return res.json();
+  },
+
+  async getFineStats(): Promise<{ totalUnpaid: number, totalPaid: number, outstandingBalance: number }> {
+    const res = await fetch(`${GATEWAY_URL}/fines/stats`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch fine stats');
     return res.json();
   },
 

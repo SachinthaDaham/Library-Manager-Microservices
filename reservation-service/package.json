@@ -20,15 +20,18 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/microservices": "^11.1.17",
     "@nestjs/mongoose": "^11.0.4",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.1.1",
     "@nestjs/swagger": "^11.2.6",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.9",
+    "axios": "^1.13.6",
     "ioredis": "^5.10.1",
     "mongoose": "^9.3.1",
     "reflect-metadata": "^0.2.2",

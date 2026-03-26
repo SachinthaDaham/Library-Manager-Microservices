@@ -5,9 +5,10 @@ import {
   Put,
   Body,
   Param,
-  HttpCode,
   HttpStatus,
   UseGuards,
+  Query,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -48,12 +49,14 @@ export class BorrowsController {
   // GET /borrows — ADMIN, LIBRARIAN
   @Get()
   @Roles('ADMIN', 'LIBRARIAN')
-  @ApiOperation({ summary: 'Get all borrow records', description: 'Requires ADMIN or LIBRARIAN role.' })
-  @ApiResponse({ status: 200, description: 'List of all borrow records.' })
+  @ApiOperation({ summary: 'Get all borrow records (paginated)', description: 'Requires ADMIN or LIBRARIAN role.' })
+  @ApiResponse({ status: 200, description: 'Paginated list of all borrow records.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  findAll() {
-    return this.borrowsService.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 20;
+    return this.borrowsService.findAll(pageNumber, limitNumber);
   }
 
   // GET /borrows/stats — ADMIN, LIBRARIAN
@@ -107,5 +110,19 @@ export class BorrowsController {
   @ApiResponse({ status: 404, description: 'Not found.' })
   returnBook(@Param('id') id: string, @Body() returnBorrowDto: ReturnBorrowDto) {
     return this.borrowsService.returnBook(id, returnBorrowDto);
+  }
+
+  // PUT /borrows/:id/renew — ADMIN, LIBRARIAN
+  @Put(':id/renew')
+  @Roles('ADMIN', 'LIBRARIAN')
+  @ApiOperation({ summary: 'Attempt to renew an active borrow for 7 days' })
+  @ApiParam({ name: 'id', example: 'sample-borrow-003' })
+  @ApiResponse({ status: 200, description: 'Book successfully renewed.' })
+  @ApiResponse({ status: 400, description: 'Renewal not possible (e.g., already returned, max renewals reached, overdue).' })
+  @ApiResponse({ status: 404, description: 'Borrow record not found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role.' })
+  renewLoan(@Param('id') id: string) {
+    return this.borrowsService.renewLoan(id);
   }
 }

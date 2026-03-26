@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import type { Book } from '../types';
-
 import { useAuth } from '../context/AuthContext';
+import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock } from 'lucide-react';
 
 export function BooksList() {
   const { user } = useAuth();
@@ -11,10 +11,26 @@ export function BooksList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newBook, setNewBook] = useState({ title: '', author: '', genre: '', isbn: '', totalCopies: 5 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState<string>('');
 
-  const fetchBooks = () => api.getBooks().then(setBooks).finally(() => setLoading(false));
+  const fetchBooks = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getBookSearch(searchQuery, selectedGenre);
+      setBooks(data);
+    } catch (err) {
+      console.error('Failed to fetch books', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  useEffect(() => { fetchBooks(); }, []);
+  useEffect(() => { 
+    const timeoutId = setTimeout(() => {
+      fetchBooks();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedGenre]);
 
   const handleAddBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +43,7 @@ export function BooksList() {
   };
 
   const handleDeleteBook = async (id: string) => {
+    if (!window.confirm('Delete this book from the catalog?')) return;
     try {
       await api.deleteBook(id);
       setBooks(books.filter(b => b._id !== id));
@@ -34,174 +51,211 @@ export function BooksList() {
   };
 
   const handleBorrow = async (id: string) => {
-    if (!user) return alert('🔒 Guest Access Restricted\n\nPlease Sign In or Create an Account to checkout library materials.');
+    if (!user) return alert('🔒 Guest Access Restricted\\n\\nPlease Sign In or Create an Account to checkout library materials.');
     try {
-      const userStr = localStorage.getItem('library_user');
-      const parsedUser = userStr ? JSON.parse(userStr) : null;
-      if (!parsedUser) return alert('User Session Error');
-      await api.createBorrow({ memberId: parsedUser.id, bookId: id, loanDurationDays: 14 });
+      await api.createBorrow({ memberId: user.id, bookId: id, loanDurationDays: 14 });
       alert('Borrowed successfully!');
       fetchBooks();
     } catch(e: any) { alert(e.message); }
   };
+
+  const handleReserve = async (id: string) => {
+    if (!user) return alert('🔒 Guest Access Restricted\\n\\nPlease Sign In or Create an Account to reserve materials.');
+    try {
+      await api.createReservation({ memberId: user.id, bookId: id });
+      alert('Successfully joined the waitlist! You will be notified when a copy is available.');
+    } catch(e: any) { alert(e.message); }
+  };
+
+  const allGenres = useMemo(() => {
+    const genres = new Set(books.map(b => b.genre).filter(Boolean));
+    return Array.from(genres);
+  }, [books]);
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
       {/* ─── Header ─── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.4rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          <h1 className="dashboard-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Library size={36} color="var(--primary)" />
             Library <span className="gradient-text">Catalog</span>
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Browse digital shelves and monitor real-time availability</p>
+          <p className="dashboard-subtitle">Browse digital shelves and monitor real-time availability</p>
         </div>
         {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && (
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ padding: '0 1.5rem', height: '100%', minHeight: '3.5rem', fontSize: '0.95rem' }}>
-            <span style={{ fontSize: '1.2rem', marginRight: '4px' }}>＋</span> Add Title
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ padding: '0 1.5rem', height: '100%', minHeight: '3.5rem' }}>
+            <Plus size={20} style={{ marginRight: '6px' }} /> Add Title
           </button>
         )}
       </div>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <input 
-          type="text" 
-          className="form-control" 
-          placeholder="Search by title, author, or genre..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ maxWidth: '400px', background: 'var(--bg-card)' }}
-        />
+      {/* ─── Search & Filters ─── */}
+      <div className="glass-panel" style={{ padding: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
+        <div style={{ flex: '1 1 300px', position: 'relative' }}>
+          <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            className="form-control" 
+            style={{ paddingLeft: '48px', width: '100%', background: '#fff' }}
+            placeholder="Search by title, author, or ISBN..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <Filter size={16} style={{ marginRight: '6px' }} /> Genres:
+          </div>
+          <button 
+            className={`btn ${selectedGenre === '' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ padding: '0.4rem 1.2rem', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', flexShrink: 0 }}
+            onClick={() => setSelectedGenre('')}
+          >
+            All
+          </button>
+          {allGenres.map(g => (
+            <button 
+              key={g}
+              className={`btn ${selectedGenre === g ? 'btn-primary' : 'btn-outline'}`}
+              style={{ padding: '0.4rem 1.2rem', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', flexShrink: 0, background: selectedGenre === g ? '' : '#fff' }}
+              onClick={() => setSelectedGenre(g)}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
-        <div className="glass-card" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '2rem', animation: 'float 2s infinite' }}>📚</div>
-          <p style={{ marginTop: '1rem' }}>Loading digital catalog...</p>
+        <div className="glass-card" style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <BookOpen size={64} style={{ opacity: 0.5, margin: '0 auto 1.5rem', animation: 'calmDrift 3s infinite alternate' }} />
+          <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>Searching the archives...</p>
+        </div>
+      ) : books.length === 0 ? (
+        <div className="glass-card" style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <Library size={64} style={{ opacity: 0.3, margin: '0 auto 1.5rem' }} />
+          <p style={{ fontWeight: 700, fontSize: '1.5rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No books found</p>
+          <p style={{ fontSize: '1rem' }}>Try adjusting your search terms or filters.</p>
         </div>
       ) : (
-        <>
-          {books.length === 0 ? (
-            <div className="glass-card" style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '4rem', marginBottom: '1.5rem', opacity: 0.5 }}>📭</div>
-              <p style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No books found in the catalog.</p>
-              <p style={{ fontSize: '0.95rem' }}>Add a new book to start building your library.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
-              {books.filter(b => 
-                b.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                b.author.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                b.genre.toLowerCase().includes(searchQuery.toLowerCase())
-              ).map(book => {
-                const isAvail = book.availableCopies > 0;
-                return (
-                  <div key={book._id} className="glass-card" style={{ 
-                    display: 'flex', flexDirection: 'column', padding: 0, margin: 0, overflow: 'hidden', 
-                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                  }}>
-                    {/* Decorative Book Header */}
-                    <div style={{ 
-                      height: '110px', 
-                      background: isAvail ? 'linear-gradient(135deg, var(--primary-light), #E2E8F0)' : 'linear-gradient(135deg, var(--status-overdue-bg), #FDE68A)',
-                      padding: '1.5rem',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      position: 'relative'
-                    }}>
-                      <div style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))', transform: 'translateY(10px)' }}>
-                        {isAvail ? '📘' : '📕'}
-                      </div>
-                      <span style={{ 
-                        padding: '6px 12px', 
-                        borderRadius: 'var(--radius-pill)', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 800,
-                        letterSpacing: '0.05em',
-                        background: '#FFF',
-                        color: isAvail ? 'var(--status-returned)' : 'var(--status-overdue)',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-                      }}>
-                        {book.availableCopies} / {book.totalCopies} AVAIL
-                      </span>
-                    </div>
-
-                    <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', lineHeight: 1.3 }}>
-                        {book.title}
-                      </h3>
-                      <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontWeight: 500 }}>
-                        by {book.author}
-                      </p>
-
-                      <div style={{ marginTop: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'var(--bg-base)', borderRadius: '6px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {book.genre}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          ID: {book.isbn}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button 
-                          className="btn btn-primary" 
-                          style={{ flex: 1, padding: '12px', fontSize: '0.9rem', boxShadow: isAvail ? '0 4px 12px var(--primary-glow)' : 'none' }}
-                          onClick={() => handleBorrow(book._id)}
-                          disabled={!isAvail}
-                        >
-                          {isAvail ? '🛒 Checkout' : 'Waitlist'}
-                        </button>
-                        {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && (
-                          <button 
-                            className="btn btn-outline" 
-                            style={{ padding: '0 1rem', borderColor: 'var(--status-overdue-bg)', color: 'var(--status-overdue)' }}
-                            onClick={() => handleDeleteBook(book._id)}
-                            title="Delete Book"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+          {books.map(book => {
+            const isAvail = book.availableCopies > 0;
+            return (
+              <div key={book._id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', margin: 0 }}>
+                {/* Decorative Header */}
+                <div style={{ 
+                  height: '130px', 
+                  background: isAvail ? 'linear-gradient(135deg, var(--primary-light), #E2E8F0)' : 'linear-gradient(135deg, var(--status-overdue-bg), #FDE68A)',
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ 
+                    position: 'absolute', right: '-20px', top: '-20px', width: '120px', height: '120px', 
+                    borderRadius: '50%', background: isAvail ? 'var(--accent)' : 'var(--status-overdue)', 
+                    filter: 'blur(40px)', opacity: 0.3 
+                  }} />
+                  
+                  <div style={{ width: '48px', height: '64px', background: '#fff', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 1 }}>
+                    {isAvail ? '📘' : '📕'}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                  
+                  <div className={`badge ${isAvail ? 'status-returned' : 'status-overdue'}`} style={{ zIndex: 1, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isAvail ? 'var(--status-returned)' : 'var(--status-overdue)', marginRight: '6px' }} />
+                    {book.availableCopies} / {book.totalCopies} AVAIL
+                  </div>
+                </div>
+
+                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', lineHeight: 1.3 }}>
+                    {book.title}
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.2rem', fontWeight: 500 }}>
+                    <User size={14} style={{ marginRight: '6px' }} /> {book.author}
+                  </div>
+
+                  <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', background: 'var(--bg-base)', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border)' }}>
+                      <Hash size={12} style={{ marginRight: '4px', opacity: 0.6 }} /> {book.genre}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', background: 'var(--bg-base)', padding: '4px 8px', borderRadius: '4px' }}>
+                      ISBN: {book.isbn || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.8rem' }}>
+                    <button 
+                      className={`btn ${isAvail ? 'btn-primary' : 'btn-outline'}`} 
+                      style={{ flex: 1, padding: '12px', fontSize: '0.9rem', color: isAvail ? '' : 'var(--text-primary)', border: isAvail ? 'none' : '1px solid var(--border)', background: isAvail ? '' : '#f8f9fa' }}
+                      onClick={() => isAvail ? handleBorrow(book._id) : handleReserve(book._id)}
+                    >
+                      {isAvail ? <><BookOpen size={16} /> Checkout Book</> : <><Clock size={16} /> Join Waitlist</>}
+                    </button>
+                    {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '0 1rem', borderColor: 'var(--status-overdue-bg)', color: 'var(--status-overdue)' }}
+                        onClick={() => handleDeleteBook(book._id)}
+                        title="Remove from Catalog"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
+      {/* Add Modal */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: 800 }}>Add New Book</h2>
-            <form onSubmit={handleAddBook} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+              <BookOpen size={24} color="var(--primary)" style={{ marginRight: '12px' }} />
+              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Add New Book</h2>
+            </div>
+            
+            <form onSubmit={handleAddBook}>
               <div className="form-group">
                 <label>Book Title</label>
                 <input className="form-control" required value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} placeholder="E.g. Clean Code" />
               </div>
+              
               <div className="form-group">
                 <label>Author</label>
                 <input className="form-control" required value={newBook.author} onChange={e => setNewBook({...newBook, author: e.target.value})} placeholder="E.g. Robert C. Martin" />
               </div>
+              
               <div className="form-group">
                 <label>Genre</label>
                 <input className="form-control" required value={newBook.genre} onChange={e => setNewBook({...newBook, genre: e.target.value})} placeholder="E.g. Software Engineering" />
               </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
+              
+              <div style={{ display: 'flex', gap: '1.5rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Initial Copies</label>
                   <input className="form-control" type="number" min="1" required value={newBook.totalCopies} onChange={e => setNewBook({...newBook, totalCopies: parseInt(e.target.value) || 1})} />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>ISBN (Optional)</label>
-                  <input className="form-control" value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} placeholder="978-..." />
+                  <input className="form-control" value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} placeholder="978-..." style={{ fontFamily: 'monospace' }} />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>+ Save to Catalog</button>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px' }} onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }}>
+                  <Plus size={18} /> Save Draft
+                </button>
               </div>
             </form>
           </div>

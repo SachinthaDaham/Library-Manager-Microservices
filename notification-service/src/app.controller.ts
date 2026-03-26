@@ -32,6 +32,12 @@ export class AppController {
     return this.appService.getAll();
   }
 
+  @Get('member/:memberId')
+  @ApiOperation({ summary: 'Get notifications for a specific member' })
+  getNotificationsByMember(@Param('memberId') memberId: string) {
+    return this.appService.findByMember(memberId);
+  }
+
   @Put(':id/read')
   @ApiOperation({ summary: 'Mark notification as read' })
   markAsRead(@Param('id') id: string) {

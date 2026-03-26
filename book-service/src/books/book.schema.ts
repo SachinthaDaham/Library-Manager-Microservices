@@ -15,6 +15,9 @@ export class Book extends Document {
   @Prop({ required: true })
   genre: string;
 
+  @Prop({ required: false })
+  description?: string;
+
   @Prop({ required: true, default: 1 })
   totalCopies: number;
 

@@ -63,6 +63,20 @@ export class AppService {
     return this.fineModel.find().sort({ createdAt: -1 }).exec();
   }
 
+  async getStats(): Promise<{ totalUnpaid: number, totalPaid: number, outstandingBalance: number }> {
+    const [unpaidCount, paidCount, unpaidFines] = await Promise.all([
+      this.fineModel.countDocuments({ paid: false }),
+      this.fineModel.countDocuments({ paid: true }),
+      this.fineModel.find({ paid: false }).exec()
+    ]);
+    const outstandingBalance = unpaidFines.reduce((sum, fine) => sum + fine.amount, 0);
+    return {
+      totalUnpaid: unpaidCount,
+      totalPaid: paidCount,
+      outstandingBalance: parseFloat(outstandingBalance.toFixed(2))
+    };
+  }
+
   async getFinesByMember(memberId: string): Promise<Fine[]> {
     return this.fineModel.find({ memberId }).sort({ createdAt: -1 }).exec();
   }

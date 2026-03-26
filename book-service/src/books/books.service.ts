@@ -31,6 +31,20 @@ export class BooksService {
     return this.bookModel.find().exec();
   }
 
+  async search(query?: string, genre?: string): Promise<Book[]> {
+    const filter: any = {};
+    if (query) {
+      filter.$or = [
+        { title: { $regex: query, $options: 'i' } },
+        { author: { $regex: query, $options: 'i' } }
+      ];
+    }
+    if (genre) {
+      filter.genre = genre;
+    }
+    return this.bookModel.find(filter).exec();
+  }
+
   async findOne(id: string): Promise<Book> {
     const book = await this.bookModel.findById(id);
     if (!book) throw new NotFoundException('Book not found');

@@ -11,7 +11,7 @@ Write-Host ""
 Write-Host "======================================" -ForegroundColor Green
 Write-Host " ArgoCD Login Credentials"            -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
-Write-Host " URL:      http://localhost:8080"     -ForegroundColor Yellow
+Write-Host " URL:      http://localhost:8081"     -ForegroundColor Yellow
 Write-Host " Username: admin"                      -ForegroundColor Yellow
 Write-Host " Password: $password"                  -ForegroundColor Yellow
 Write-Host "======================================" -ForegroundColor Green
@@ -19,6 +19,6 @@ Write-Host ""
 Write-Host "Starting port-forward... (Press Ctrl+C to stop)" -ForegroundColor Cyan
 Write-Host "Opening browser in 3 seconds..." -ForegroundColor Cyan
 
-Start-Job -ScriptBlock { Start-Sleep 3; Start-Process "http://localhost:8080" } | Out-Null
+Start-Job -ScriptBlock { Start-Sleep 3; Start-Process "http://localhost:8081" } | Out-Null
 
-kubectl port-forward svc/argocd-server -n argocd 8080:80
+kubectl port-forward svc/argocd-server -n argocd 8081:80

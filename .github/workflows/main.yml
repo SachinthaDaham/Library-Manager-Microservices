@@ -17,6 +17,9 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -36,7 +39,7 @@ jobs:
             echo "===== Building: $SERVICE ====="
             IMAGE="ghcr.io/${REPO}/${SERVICE}:${SHA}"
             IMAGE_LATEST="ghcr.io/${REPO}/${SERVICE}:latest"
-            docker build -t "$IMAGE" -t "$IMAGE_LATEST" "./$SERVICE"
+            docker build --platform linux/arm64 -t "$IMAGE" -t "$IMAGE_LATEST" "./$SERVICE"
             docker push "$IMAGE"
             docker push "$IMAGE_LATEST"
             sed -i "s|image: .*${SERVICE}:.*|image: ${IMAGE}|g" "k8s/${SERVICE}.yaml"

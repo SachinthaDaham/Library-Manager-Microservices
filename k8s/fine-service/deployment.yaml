@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: fine-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/fine-service:4e85605227b56df1441edadb9fcffdc4487fd379
+        image: ghcr.io/sachinthadaham/library-manager-microservices/fine-service:9a28e8878e21f99c0f7169a3fb386020b7707403
         imagePullPolicy: Always
         ports:
         - containerPort: 3004

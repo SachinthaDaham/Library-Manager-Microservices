@@ -1,4 +1,4 @@
-name: Production AKS CI/CD Pipeline
+name: Library System AKS CI/CD
 
 on:
   push:
@@ -8,51 +8,61 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Authenticate GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Publish Microservices to GHCR
+      - name: Build and Push All Microservices
         run: |
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          services=("api-gateway" "auth-service" "book-service" "borrow-service" "fine-service" "notification-service" "reservation-service" "frontend")
-          for service in "${services[@]}"; do
-            echo "========== Building $service =========="
-            IMAGE_NAME="ghcr.io/$REPO/$service"
-            docker build -t $IMAGE_NAME:${{ github.sha }} ./$service
-            docker push $IMAGE_NAME:${{ github.sha }}
-            
-            # Inject the exact immutable image digest into the K8s manifest
-            sed -i "s|image: .*$service:.*|image: $IMAGE_NAME:${{ github.sha }}|g" k8s/$service.yaml
+          SHA=${{ github.sha }}
+          SERVICES=("api-gateway" "auth-service" "book-service" "borrow-service" "fine-service" "notification-service" "reservation-service" "frontend")
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "===== Building: $SERVICE ====="
+            IMAGE="ghcr.io/${REPO}/${SERVICE}:${SHA}"
+            IMAGE_LATEST="ghcr.io/${REPO}/${SERVICE}:latest"
+            docker build -t "$IMAGE" -t "$IMAGE_LATEST" "./$SERVICE"
+            docker push "$IMAGE"
+            docker push "$IMAGE_LATEST"
+            sed -i "s|image: .*${SERVICE}:.*|image: ${IMAGE}|g" "k8s/${SERVICE}.yaml"
+            echo "Done: $IMAGE"
           done
 
-      - name: Authenticate Azure natively via OIDC
+      - name: Log in to Azure via OIDC
         uses: azure/login@v2
         with:
-          client-id: "83bc1a9b-447d-8621-8281-62bf5f587001"
-          tenant-id: "74531549-6369-4ddc-87a4-32aa878ebbdc"
+          client-id: "fe8173f1-971b-447d-8621-62bf5f587001"
+          tenant-id: "93ff32a7-6663-47af-aee2-b421dad28886"
           subscription-id: "435e28dc-213d-46d4-b1db-d2c10cde033a"
 
-      - name: Connect to Azure Kubernetes Service
+      - name: Get AKS Credentials
         uses: azure/aks-set-context@v3
         with:
           cluster-name: library-aks
           resource-group: Library-reg
           admin: 'true'
 
-      - name: Execute Zero-Downtime Deployment
+      - name: Create Namespace if Missing
+        run: kubectl create namespace library-system --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to AKS
         run: |
-          echo "Applying architectural manifests to AKS cluster..."
           kubectl apply -f k8s/
-          echo "Deployment successful."
+          echo "===== Deployment complete - Pod status ====="
+          kubectl get pods -n library-system
+

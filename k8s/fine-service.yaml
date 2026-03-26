@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: fine-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: fine-service
-        image: dahamsachintha1/fine-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/fine-service:latest
         ports:
         - containerPort: 3004
         envFrom:

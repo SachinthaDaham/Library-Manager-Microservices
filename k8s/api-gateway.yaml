@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-gateway
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: dahamsachintha1/api-gateway:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/api-gateway:latest
         ports:
         - containerPort: 3000
         envFrom:

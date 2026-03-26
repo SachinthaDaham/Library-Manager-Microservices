@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: book-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: book-service
-        image: dahamsachintha1/book-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/book-service:latest
         ports:
         - containerPort: 3002
         envFrom:

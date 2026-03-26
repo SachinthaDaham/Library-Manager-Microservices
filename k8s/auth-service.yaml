@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: dahamsachintha1/auth-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/auth-service:latest
         ports:
         - containerPort: 3007
         envFrom:

@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: borrow-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: borrow-service
-        image: dahamsachintha1/borrow-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/borrow-service:latest
         ports:
         - containerPort: 3003
         envFrom:

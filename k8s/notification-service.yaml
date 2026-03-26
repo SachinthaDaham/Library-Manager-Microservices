@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: dahamsachintha1/notification-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/notification-service:latest
         ports:
         - containerPort: 3006
         envFrom:

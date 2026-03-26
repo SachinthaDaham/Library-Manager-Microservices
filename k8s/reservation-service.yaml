@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reservation-service
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: reservation-service
-        image: dahamsachintha1/reservation-service:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/reservation-service:latest
         ports:
         - containerPort: 3005
         envFrom:

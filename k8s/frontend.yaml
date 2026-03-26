@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: dahamsachintha1/frontend:latest
+        image: ghcr.io/sachinthadaham/library-manager-microservices/frontend:latest
         ports:
         - containerPort: 80
 ---

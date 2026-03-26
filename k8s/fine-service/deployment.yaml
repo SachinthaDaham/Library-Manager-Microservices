@@ -29,6 +29,8 @@ spec:
         env:
         - name: PORT
           value: "3004"
+        - name: MONGODB_URI
+          value: "mongodb+srv://f1admin:DGoSkGXpThvjkv2E@cluster0.gsu8i5s.mongodb.net/library-fine-db?retryWrites=true&w=majority&appName=Cluster0"
         resources:
           requests:
             memory: "128Mi"
@@ -46,5 +48,6 @@ spec:
             port: 3004
           initialDelaySeconds: 20
           periodSeconds: 30
+
 
 

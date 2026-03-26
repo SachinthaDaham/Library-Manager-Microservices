@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+﻿import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { AuthMiddleware } from './auth.middleware';
@@ -8,10 +8,10 @@ import { AuthMiddleware } from './auth.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // 1. PUBLIC ROUTES — Auth and public book browsing (no token needed)
+    // 1. PUBLIC ROUTES â€” Auth and public book browsing (no token needed)
     consumer
       .apply(createProxyMiddleware({
-        target: 'http://localhost:3001',
+        target: 'http://auth-service:3007',
         changeOrigin: true,
         pathRewrite: { '^/api/auth': '/auth' }
       }))
@@ -22,7 +22,7 @@ export class AppModule implements NestModule {
 
     // Public GET for books (catalog browsing by guests)
     consumer
-      .apply(createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
+      .apply(createProxyMiddleware({ target: 'http://book-service:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
       .forRoutes(
         { path: '/api/books', method: RequestMethod.GET },
         { path: '/api/books/*', method: RequestMethod.GET },
@@ -46,20 +46,21 @@ export class AppModule implements NestModule {
     );
 
     // 3. Protected reverse-proxy routes (base + wildcard)
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://book-service:3002', changeOrigin: true, pathRewrite: { '^/api/books': '/books' } }))
       .forRoutes(
         { path: '/api/books', method: RequestMethod.POST },
         { path: '/api/books/*', method: RequestMethod.ALL },
       );
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3001', changeOrigin: true, pathRewrite: { '^/api/members': '/members' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://auth-service:3007', changeOrigin: true, pathRewrite: { '^/api/members': '/members' } }))
       .forRoutes('/api/members', '/api/members/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3003', changeOrigin: true, pathRewrite: { '^/api/borrows': '/borrows' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://borrow-service:3003', changeOrigin: true, pathRewrite: { '^/api/borrows': '/borrows' } }))
       .forRoutes('/api/borrows', '/api/borrows/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3004', changeOrigin: true, pathRewrite: { '^/api/fines': '/fines' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://fine-service:3004', changeOrigin: true, pathRewrite: { '^/api/fines': '/fines' } }))
       .forRoutes('/api/fines', '/api/fines/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3005', changeOrigin: true, pathRewrite: { '^/api/reservations': '/reservations' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://reservation-service:3005', changeOrigin: true, pathRewrite: { '^/api/reservations': '/reservations' } }))
       .forRoutes('/api/reservations', '/api/reservations/*');
-    consumer.apply(createProxyMiddleware({ target: 'http://localhost:3006', changeOrigin: true, pathRewrite: { '^/api/notifications': '/notifications' } }))
+    consumer.apply(createProxyMiddleware({ target: 'http://notification-service:3006', changeOrigin: true, pathRewrite: { '^/api/notifications': '/notifications' } }))
       .forRoutes('/api/notifications', '/api/notifications/*');
   }
 }
+

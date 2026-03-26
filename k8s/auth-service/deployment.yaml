@@ -34,6 +34,8 @@ spec:
               key: JWT_SECRET
         - name: PORT
           value: "3007"
+        - name: MONGODB_URI
+          value: "mongodb+srv://f1admin:DGoSkGXpThvjkv2E@cluster0.gsu8i5s.mongodb.net/library-auth-db?retryWrites=true&w=majority&appName=Cluster0"
         resources:
           requests:
             memory: "128Mi"
@@ -51,5 +53,6 @@ spec:
             port: 3007
           initialDelaySeconds: 20
           periodSeconds: 30
+
 
 

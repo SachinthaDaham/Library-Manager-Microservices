@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: borrow-service
+  namespace: library-system
+  labels:
+    app: borrow-service
+    component: borrowing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: borrow-service
+  template:
+    metadata:
+      labels:
+        app: borrow-service
+        component: borrowing
+    spec:
+      containers:
+      - name: borrow-service
+        image: ghcr.io/sachinthadaham/library-manager-microservices/borrow-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3003
+        envFrom:
+        - configMapRef:
+            name: library-config
+        env:
+        - name: PORT
+          value: "3003"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 20
+          periodSeconds: 30

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: library-system
+  labels:
+    app: auth-service
+    component: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        component: auth
+    spec:
+      containers:
+      - name: auth-service
+        image: ghcr.io/sachinthadaham/library-manager-microservices/auth-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3007
+        envFrom:
+        - configMapRef:
+            name: library-config
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: library-secrets
+              key: JWT_SECRET
+        - name: PORT
+          value: "3007"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3007
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3007
+          initialDelaySeconds: 20
+          periodSeconds: 30

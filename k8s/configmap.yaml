@@ -10,8 +10,15 @@ metadata:
   namespace: library-system
 data:
   NODE_ENV: "production"
-  # These should ideally be in a Secret, but ConfigMap is used for illustration
   MONGODB_URI: "mongodb+srv://admin:admin123@cluster0.mongodb.net/library?retryWrites=true&w=majority"
   RABBITMQ_URL: "amqp://rabbitmq:5672"
-  JWT_SECRET: "super_secret_key_12345"
   PORT: "3000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: library-secrets
+  namespace: library-system
+type: Opaque
+stringData:
+  JWT_SECRET: "super_secret_key_12345"

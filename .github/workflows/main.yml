@@ -6,13 +6,13 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
 jobs:
   build:
-    name: Build & Push
+    name: Build & Push (${{ matrix.service }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,7 +26,7 @@ jobs:
           - reservation-service
           - frontend
       fail-fast: false
-    
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -44,39 +44,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Microservice
+      - name: Build and Push ${{ matrix.service }}
         run: |
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           SERVICE=${{ matrix.service }}
           SHA=${{ github.sha }}
-          
-          echo "===== Building: $SERVICE ====="
           IMAGE="ghcr.io/${REPO}/${SERVICE}:${SHA}"
           IMAGE_LATEST="ghcr.io/${REPO}/${SERVICE}:latest"
-          
+
+          echo "===== Building: $SERVICE ====="
           docker build --platform linux/arm64 -t "$IMAGE" -t "$IMAGE_LATEST" "./$SERVICE"
           docker push "$IMAGE"
           docker push "$IMAGE_LATEST"
           echo "Done: $IMAGE"
 
   deploy:
-    name: Deploy to AKS
+    name: Update Tags & Deploy via ArgoCD
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Kubernetes Manifests
+      - name: Update K8s Image Tags (GitHub Bot)
         run: |
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           SHA=${{ github.sha }}
           SERVICES=("api-gateway" "auth-service" "book-service" "borrow-service" "fine-service" "notification-service" "reservation-service" "frontend")
           for SERVICE in "${SERVICES[@]}"; do
             IMAGE="ghcr.io/${REPO}/${SERVICE}:${SHA}"
-            sed -i "s|image: .*${SERVICE}:.*|image: ${IMAGE}|g" "k8s/${SERVICE}.yaml"
+            MANIFEST="k8s/${SERVICE}/deployment.yaml"
+            sed -i "s|image: ghcr.io.*/${SERVICE}:.*|image: ${IMAGE}|g" "$MANIFEST"
+            echo "Updated $MANIFEST → $IMAGE"
           done
-          echo "All K8s manifests dynamically updated to use $SHA tags."
+
+      - name: Commit Updated Tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/
+          git diff --cached --quiet || git commit -m "chore(k8s): update image tags to ${{ github.sha }}"
+          git push
 
       - name: Log in to Azure via OIDC
         uses: azure/login@v2
@@ -92,11 +102,23 @@ jobs:
           resource-group: Library-reg
           admin: 'true'
 
-      - name: Create Namespace if Missing
-        run: kubectl create namespace library-system --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Deploy to AKS
+      - name: Bootstrap ArgoCD (if not present)
         run: |
-          kubectl apply -f k8s/
-          echo "===== Deployment complete - Pod status ====="
-          kubectl get pods -n library-system
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
+          echo "Waiting for ArgoCD to be ready..."
+          kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd || true
+
+      - name: Apply ArgoCD Root App (App-of-Apps)
+        run: |
+          kubectl create namespace library-system --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f argocd/root-app.yaml
+          echo "ArgoCD root app applied — auto-sync will deploy all services."
+
+      - name: Show Deployment Status
+        run: |
+          echo "===== ArgoCD Applications ====="
+          kubectl get applications -n argocd || true
+          echo "===== Library System Pods ====="
+          kubectl get pods -n library-system || true

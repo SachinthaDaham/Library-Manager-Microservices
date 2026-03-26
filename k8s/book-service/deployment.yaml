@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-service
+  namespace: library-system
+  labels:
+    app: book-service
+    component: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-service
+  template:
+    metadata:
+      labels:
+        app: book-service
+        component: catalog
+    spec:
+      containers:
+      - name: book-service
+        image: ghcr.io/sachinthadaham/library-manager-microservices/book-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3002
+        envFrom:
+        - configMapRef:
+            name: library-config
+        env:
+        - name: PORT
+          value: "3002"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 20
+          periodSeconds: 30

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: library-system
+  labels:
+    app: api-gateway
+    component: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        component: gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: ghcr.io/sachinthadaham/library-manager-microservices/api-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: library-config
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: library-secrets
+              key: JWT_SECRET
+        - name: PORT
+          value: "3000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 20
+          periodSeconds: 30

@@ -105,8 +105,10 @@ jobs:
       - name: Bootstrap ArgoCD (if not present)
         run: |
           kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
-          echo "Waiting for ArgoCD to be ready..."
+          kubectl apply -n argocd \
+            -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml \
+            --server-side
+          echo "Waiting for ArgoCD server to be ready..."
           kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd || true
 
       - name: Apply ArgoCD Root App (App-of-Apps)

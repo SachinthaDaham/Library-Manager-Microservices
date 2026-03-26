@@ -37,11 +37,19 @@ jobs:
             sed -i "s|image: .*$service:.*|image: $IMAGE_NAME:${{ github.sha }}|g" k8s/$service.yaml
           done
 
-      - name: Connect to Azure Kubernetes Service
-        uses: azure/k8s-set-context@v3
+      - name: Authenticate Azure natively via OIDC
+        uses: azure/login@v2
         with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+          client-id: "83bc1a9b-447d-8621-8281-62bf5f587001"
+          tenant-id: "74531549-6369-4ddc-87a4-32aa878ebbdc"
+          subscription-id: "435e28dc-213d-46d4-b1db-d2c10cde033a"
+
+      - name: Connect to Azure Kubernetes Service
+        uses: azure/aks-set-context@v3
+        with:
+          cluster-name: library-aks
+          resource-group: Library-reg
+          admin: 'true'
 
       - name: Execute Zero-Downtime Deployment
         run: |

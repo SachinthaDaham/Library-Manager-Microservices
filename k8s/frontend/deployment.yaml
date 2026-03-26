@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/sachinthadaham/library-manager-microservices/frontend:a93037d65bce3624a12cd78313a9f97e95f6dee0
+        image: ghcr.io/sachinthadaham/library-manager-microservices/frontend:781033e96ddeb772980cec86b38c703905fc3e7e
         imagePullPolicy: Always
         ports:
         - containerPort: 80

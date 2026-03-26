@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3000:3000"
+    env_file: ./api-gateway/.env
+    
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "3007:3007"
+    env_file: ./auth-service/.env
+
+  book-service:
+    build: ./book-service
+    ports:
+      - "3002:3002"
+    env_file: ./book-service/.env
+
+  borrow-service:
+    build: ./borrow-service
+    ports:
+      - "3003:3003"
+    env_file: ./borrow-service/.env
+
+  fine-service:
+    build: ./fine-service
+    ports:
+      - "3004:3004"
+    env_file: ./fine-service/.env
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "3006:3006"
+    env_file: ./notification-service/.env
+
+  reservation-service:
+    build: ./reservation-service
+    ports:
+      - "3005:3005"
+    env_file: ./reservation-service/.env
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"

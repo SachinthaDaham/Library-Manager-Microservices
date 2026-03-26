@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: ghcr.io/sachinthadaham/library-manager-microservices/api-gateway:4150bc7a3041e4aff209260cd2bc3773459e29df
+        image: ghcr.io/sachinthadaham/library-manager-microservices/api-gateway:4e85605227b56df1441edadb9fcffdc4487fd379
         imagePullPolicy: Always
         ports:
         - containerPort: 3000

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: reservation-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/reservation-service:4150bc7a3041e4aff209260cd2bc3773459e29df
+        image: ghcr.io/sachinthadaham/library-manager-microservices/reservation-service:4e85605227b56df1441edadb9fcffdc4487fd379
         imagePullPolicy: Always
         ports:
         - containerPort: 3005

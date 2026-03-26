@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -10,7 +10,7 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://localhost:5672'],
+      urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
       queue: 'reservation_queue',
       queueOptions: { durable: true },
     },
@@ -27,6 +27,7 @@ async function bootstrap() {
   await app.startAllMicroservices();
   const port = process.env.PORT || 3005;
   await app.listen(port);
-  console.log(`🚀 Reservation Service is running on http://localhost:${port}`);
+  console.log(`ðŸš€ Reservation Service is running on http://localhost:${port}`);
 }
 bootstrap();
+

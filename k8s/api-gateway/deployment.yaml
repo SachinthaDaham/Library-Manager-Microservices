@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-gateway
@@ -42,14 +42,14 @@ spec:
             memory: "256Mi"
             cpu: "250m"
         readinessProbe:
-          httpGet:
-            path: /health
+          tcpSocket:
             port: 3000
           initialDelaySeconds: 10
           periodSeconds: 10
         livenessProbe:
-          httpGet:
-            path: /health
+          tcpSocket:
             port: 3000
           initialDelaySeconds: 20
           periodSeconds: 30
+
+

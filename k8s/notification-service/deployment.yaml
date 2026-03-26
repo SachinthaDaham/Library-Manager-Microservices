@@ -29,6 +29,11 @@ spec:
         env:
         - name: PORT
           value: "3006"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: library-secrets
+              key: JWT_SECRET
         - name: MONGODB_URI
           value: "mongodb+srv://f1admin:DGoSkGXpThvjkv2E@cluster0.gsu8i5s.mongodb.net/library-notification-db?retryWrites=true&w=majority&appName=Cluster0"
         resources:
@@ -48,6 +53,7 @@ spec:
             port: 3006
           initialDelaySeconds: 20
           periodSeconds: 30
+
 
 
 

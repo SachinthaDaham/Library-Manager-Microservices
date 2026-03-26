@@ -109,6 +109,9 @@ body::before {
   flex-direction: column;
   z-index: 10;
   box-shadow: 4px 0 24px rgba(100, 116, 139, 0.05);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* ─── BRANDING ─────────────────────────────────────────── */

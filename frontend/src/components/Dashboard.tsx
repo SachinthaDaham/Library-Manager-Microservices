@@ -19,6 +19,7 @@ export const Dashboard = () => {
   const [userMap, setUserMap] = useState<Record<string, string>>({});
   const [bookMap, setBookMap] = useState<Record<string, string>>({});
   const [myPenaltyPoints, setMyPenaltyPoints] = useState<number>(0);
+  const [showCSVPreview, setShowCSVPreview] = useState(false);
 
   const loadData = async (pageNum = 1, isLoadMore = false) => {
     if (isLoadMore) setLoadingMore(true);
@@ -78,13 +79,14 @@ export const Dashboard = () => {
       csvRows.push([`"${r._id}"`, `"${member}"`, `"${book}"`, `"${formatDate(r.borrowDate)}"`, `"${formatDate(r.dueDate)}"`, `"${r.status}"`].join(','));
     });
     
-    const blob = new Blob([csvRows.join('\\n')], { type: 'text/csv' });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `library_borrow_ledger_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+    setShowCSVPreview(false);
   };
 
   const formatDate = (d?: string) => d
@@ -176,7 +178,7 @@ export const Dashboard = () => {
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Displaying {borrows.length} architectural events</p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-outline" onClick={exportCSV} title="Export CSV Report" style={{ padding: '8px 12px', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)', background: 'rgba(16,185,129,0.05)', color: 'var(--status-returned)' }}>
+            <button className="btn btn-outline" onClick={() => setShowCSVPreview(true)} title="Export CSV Report" style={{ padding: '8px 12px', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)', background: 'rgba(16,185,129,0.05)', color: 'var(--status-returned)' }}>
               <Download size={14} /> 
             </button>
             <button className="btn btn-outline" onClick={() => loadData(1)} style={{ padding: '8px 16px', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)' }}>
@@ -324,6 +326,55 @@ export const Dashboard = () => {
 
       {showBorrowModal && <BorrowModal onClose={() => setShowBorrowModal(false)} onSuccess={() => { setShowBorrowModal(false); loadData(); }} />}
       {selectedReturn && <ReturnModal record={selectedReturn} onClose={() => setSelectedReturn(null)} onSuccess={() => { setSelectedReturn(null); loadData(); }} />}
+
+      {/* CSV Preview Modal */}
+      {showCSVPreview && (
+        <div className="modal-overlay" onClick={() => setShowCSVPreview(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.3rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Download size={20} color="var(--primary)" /> CSV Report Preview
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>{borrows.length} records ready for export</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button className="btn btn-outline" onClick={() => setShowCSVPreview(false)} style={{ padding: '8px 16px' }}>Close</button>
+                <button className="btn btn-primary" onClick={exportCSV} style={{ padding: '8px 20px' }}>
+                  <Download size={14} style={{ marginRight: '6px' }} /> Download CSV
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ maxHeight: '400px', overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <table className="data-table" style={{ fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0 }}>
+                    <th style={{ padding: '10px 12px' }}>Borrow ID</th>
+                    <th>Member</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {borrows.map(r => (
+                    <tr key={r._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r._id.substring(0, 12)}...</td>
+                      <td style={{ fontWeight: 600 }}>{userMap[r.memberId] || r.memberId.substring(0, 8)}</td>
+                      <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{bookMap[r.bookId] || 'Unknown'}</td>
+                      <td>{formatDate(r.borrowDate)}</td>
+                      <td>{formatDate(r.dueDate)}</td>
+                      <td><span className={`badge status-${r.status.toLowerCase()}`} style={{ fontSize: '0.7rem' }}>{r.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

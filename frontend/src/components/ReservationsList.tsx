@@ -11,13 +11,18 @@ export function ReservationsList() {
   const [loading, setLoading] = useState(true);
   const [showResModal, setShowResModal] = useState(false);
   const [targetBookId, setTargetBookId] = useState('');
+  const [targetMemberId, setTargetMemberId] = useState('');
   const [bookSearch, setBookSearch] = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
   const [showBookDropdown, setShowBookDropdown] = useState(false);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userMap, setUserMap] = useState<Record<string, string>>({});
   const [bookMap, setBookMap] = useState<Record<string, string>>({});
 
   const filteredBooks = books.filter(b => b.title.toLowerCase().includes(bookSearch.toLowerCase()) || (b._id && b._id.includes(bookSearch)));
+  const filteredMembers = allUsers.filter(u => u.name.toLowerCase().includes(memberSearch.toLowerCase()) || u.email.toLowerCase().includes(memberSearch.toLowerCase()));
 
   const fetchRes = () => api.getReservations().then(data => {
     setAllRes(data);
@@ -37,6 +42,7 @@ export function ReservationsList() {
       setBookMap(bMap);
     });
     api.getUsers().then(d => {
+      setAllUsers(d);
       const uMap: Record<string, string> = {};
       d.forEach((u: any) => { uMap[u._id] = u.name; });
       setUserMap(uMap);
@@ -54,7 +60,21 @@ export function ReservationsList() {
   const handleFulfill = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      await api.fulfillReservation(id);
+      const result = await api.fulfillReservation(id);
+      // Send a targeted notification to the specific user
+      try {
+        const bookTitle = bookMap[result.bookId] || 'a book';
+        await fetch('http://localhost:3000/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memberId: result.memberId,
+            message: `Your hold for "${bookTitle}" is now READY FOR PICKUP! Please visit the library within 3 days to collect your copy.`,
+            type: 'SUCCESS',
+            metadata: { bookId: result.bookId, memberId: result.memberId }
+          }),
+        });
+      } catch (notifErr) { console.error('Failed to send pickup notification:', notifErr); }
       fetchRes();
     } catch (e: any) { alert(e.message); }
   };
@@ -65,13 +85,20 @@ export function ReservationsList() {
       alert('Please select a valid Book from the dropdown list.');
       return;
     }
+    const isPrivileged = user?.role === 'ADMIN' || user?.role === 'LIBRARIAN';
+    const memberId = isPrivileged ? targetMemberId : user?.id;
+    if (!memberId) {
+      alert(isPrivileged ? 'Please select a target member for this hold.' : 'Session Error');
+      return;
+    }
     try {
-      if (!user) return alert('Session Error');
-      await api.createReservation({ memberId: user.id, bookId: targetBookId });
+      await api.createReservation({ memberId, bookId: targetBookId });
       fetchRes();
       setShowResModal(false);
       setTargetBookId('');
+      setTargetMemberId('');
       setBookSearch('');
+      setMemberSearch('');
     } catch (err: any) { alert(err.message); }
   };
 
@@ -262,9 +289,43 @@ export function ReservationsList() {
                 )}
               </div>
               
+              {/* Member Selection (Admin/Librarian only) */}
+              {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && (
+                <div className="form-group" style={{ position: 'relative', marginTop: '1rem' }}>
+                  <label>Hold For Member</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      className="form-control"
+                      style={{ paddingLeft: '48px' }}
+                      placeholder="Search member by name or email..."
+                      value={memberSearch}
+                      onChange={e => { setMemberSearch(e.target.value); setShowMemberDropdown(true); setTargetMemberId(''); }}
+                      onFocus={() => setShowMemberDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowMemberDropdown(false), 200)}
+                    />
+                  </div>
+                  
+                  {showMemberDropdown && filteredMembers.length > 0 && (
+                    <div style={{ position: 'absolute', top: '75px', left: 0, right: 0, background: '#fff', border: '1px solid var(--border)', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 20, maxHeight: '200px', overflowY: 'auto', borderRadius: 'var(--radius-sm)' }}>
+                      {filteredMembers.map(u => (
+                        <div
+                          key={u._id}
+                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--bg-base)', background: targetMemberId === u._id ? 'var(--primary-light)' : '#fff', transition: 'background 0.2s' }}
+                          onMouseDown={e => { e.preventDefault(); setMemberSearch(u.name); setTargetMemberId(u._id); setShowMemberDropdown(false); }}
+                        >
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{u.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.email} · {u.role}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                 <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px' }} onClick={() => setShowResModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }} disabled={!targetBookId}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }} disabled={!targetBookId || ((user?.role === 'ADMIN' || user?.role === 'LIBRARIAN') && !targetMemberId)}>
                   Confirm Hold
                 </button>
               </div>

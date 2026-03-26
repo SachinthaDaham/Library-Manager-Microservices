@@ -9,8 +9,7 @@ export function FinesList() {
   const { user } = useAuth();
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPayment, setShowPayment] = useState(false);
-  const [selectedFine, setSelectedFine] = useState<string | null>(null);
+  const [selectedFine, setSelectedFine] = useState<Fine | null>(null);
 
   const [userMap, setUserMap] = useState<Record<string, string>>({});
   const [bookMap, setBookMap] = useState<Record<string, string>>({});
@@ -176,7 +175,7 @@ export function FinesList() {
                           <button 
                             className="btn btn-primary" 
                             style={{ padding: '8px 16px', fontSize: '0.85rem' }} 
-                            onClick={() => { setSelectedFine(f._id); setShowPayment(true); }}
+                            onClick={() => setSelectedFine(f)}
                           >
                             Pay Fine
                           </button>
@@ -200,11 +199,14 @@ export function FinesList() {
         </div>
       )}
 
-      {showPayment && selectedFine && (
+      {selectedFine && (
         <PaymentModal
-          fineId={selectedFine}
-          onSuccess={() => { setShowPayment(false); fetchFines(); }}
-          onCancel={() => setShowPayment(false)}
+          fine={selectedFine}
+          userMap={userMap}
+          bookTitle={getBookTitleForFine(selectedFine.borrowId)}
+          onClose={() => setSelectedFine(null)}
+          onSuccess={() => { setSelectedFine(null); fetchFines(); }}
+          apiPay={api.payFine}
         />
       )}
     </div>

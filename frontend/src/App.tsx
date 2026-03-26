@@ -46,6 +46,8 @@ function AppContent() {
     { id: 'Reservations', icon: '🕒', label: 'Hold Queue' },
     ...(user.role === 'ADMIN' ? [
       { id: 'Users', icon: '👥', label: 'User Management' },
+    ] : []),
+    ...(user.role === 'ADMIN' || user.role === 'LIBRARIAN' ? [
       { id: 'Notifications', icon: '🔔', label: 'Event Logs' }
     ] : []),
   ] : [

@@ -134,8 +134,12 @@ export class BorrowsService {
       throw new BadRequestException(`Borrow record has already been returned.`);
     }
 
-    // Sync return with Book Service
+    // Sync return with Book Service and get Book Title for event logs
+    let bookTitle = record.bookId;
     try {
+      const bookRes = await firstValueFrom(this.httpService.get(`http://book-service:3002/books/${record.bookId}`));
+      if (bookRes.data?.title) bookTitle = bookRes.data.title;
+      
       await firstValueFrom(this.httpService.put(`http://book-service:3002/books/${record.bookId}/availability`, { action: 'return' }));
     } catch (error: any) {
       console.error(`Failed to sync book return: ${error.message}`);
@@ -172,7 +176,7 @@ export class BorrowsService {
     }
 
     // Event Publish
-    const payload = { borrowId: record._id, bookId: record.bookId, memberId: record.memberId, timestamp: new Date().toISOString() };
+    const payload = { borrowId: record._id, bookId: record.bookId, bookTitle, memberId: record.memberId, timestamp: new Date().toISOString() };
     this.reservationClient.emit('book.returned', payload);
     this.notificationClient.emit('book.returned', payload);
 

@@ -8,7 +8,7 @@ export class AppService {
   constructor(@InjectModel(NotificationLog.name) private notifModel: Model<NotificationLog>) {}
 
   async notifyOverdue(data: any): Promise<NotificationLog> {
-    const msg = `Borrow ID ${String(data.borrowId).substring(0,8)} is OVERDUE! Please return Book ${data.bookId} immediately.`;
+    const msg = `Borrow ID ${String(data.borrowId).substring(0,8)} is OVERDUE! Please return '${data.bookTitle || data.bookId}' immediately.`;
     const notif = new this.notifModel({
       memberId: data.memberId,
       message: msg,
@@ -19,7 +19,7 @@ export class AppService {
   }
 
   async notifyReturn(data: any): Promise<NotificationLog> {
-    const msg = `Thank you for returning Book ${data.bookId}. Borrow ID ${String(data.borrowId).substring(0,8)} is resolved.`;
+    const msg = `Thank you for returning '${data.bookTitle || data.bookId}'. Borrow ID ${String(data.borrowId).substring(0,8)} is resolved.`;
     const notif = new this.notifModel({
       memberId: data.memberId,
       message: msg,

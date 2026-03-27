@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: book-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/book-service:9dc073e86c085809b536da78481276a2ee8dd041
+        image: ghcr.io/sachinthadaham/library-manager-microservices/book-service:a43e0a8e57bc528f74326f5936f4c2f773641d34
         imagePullPolicy: Always
         ports:
         - containerPort: 3002

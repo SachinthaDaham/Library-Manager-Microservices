@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface AuthUser {
   id: string;
@@ -45,6 +45,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (res.ok) {
           const userProfile = await res.json();
+          // Map MongoDB _id strictly to frontend 'id' interface
+          if (!userProfile.id && userProfile._id) {
+             userProfile.id = userProfile._id;
+          }
           setToken(storedToken);
           setUser(userProfile);
           localStorage.setItem('library_user', JSON.stringify(userProfile));

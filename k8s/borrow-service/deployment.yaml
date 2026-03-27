@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: borrow-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/borrow-service:a43e0a8e57bc528f74326f5936f4c2f773641d34
+        image: ghcr.io/sachinthadaham/library-manager-microservices/borrow-service:bf41b2d3f39dc641704e6087ac8e0380b518a32c
         imagePullPolicy: Always
         ports:
         - containerPort: 3003

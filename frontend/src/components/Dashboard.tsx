@@ -4,7 +4,8 @@ import type { BorrowRecord } from '../types';
 import { BorrowModal } from './BorrowModal';
 import { ReturnModal } from './ReturnModal';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Activity, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw, Calendar, Clock, ChevronRight, Inbox, Download, ChevronDown } from 'lucide-react';
+import { BookOpen, Activity, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw, Calendar, Clock, ChevronRight, Inbox, Download, ChevronDown, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -167,6 +168,68 @@ export const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* ─── Advanced Analytics Visuals ─── */}
+      {user?.role !== 'MEMBER' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          
+          <div className="glass-card" style={{ padding: '1.5rem', margin: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart2 size={18} color="var(--primary)" /> 7-Day Borrowing Trends
+            </h3>
+            <div style={{ width: '100%', height: 250 }}>
+              <ResponsiveContainer>
+                <BarChart data={(() => {
+                  const days: Record<string, number> = {};
+                  for(let i=6; i>=0; i--) {
+                     const d = new Date(); d.setDate(d.getDate() - i);
+                     days[d.toISOString().split('T')[0]] = 0;
+                  }
+                  borrows.forEach(b => {
+                     const date = b.borrowDate.split('T')[0];
+                     if (days[date] !== undefined) days[date]++;
+                  });
+                  return Object.keys(days).map(date => ({ date: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(date)), count: days[date] }));
+                })()}>
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                  <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                  <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 6, 6]} barSize={32} animationDuration={1500} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="glass-card" style={{ padding: '1.5rem', margin: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <PieChartIcon size={18} color="var(--status-returned)" /> System Health Distribution
+            </h3>
+            <div style={{ width: '100%', height: 250 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie 
+                    data={[
+                      { name: 'Active', value: stats.active, color: '#3B82F6' },
+                      { name: 'Returned', value: stats.returned, color: '#10B981' },
+                      { name: 'Overdue', value: stats.overdue, color: '#EF4444' }
+                    ]} 
+                    cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value"
+                    animationDuration={1500}
+                  >
+                    {[
+                      { name: 'Active', value: stats.active, color: '#3B82F6' },
+                      { name: 'Returned', value: stats.returned, color: '#10B981' },
+                      { name: 'Overdue', value: stats.overdue, color: '#EF4444' }
+                    ].map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
+                  </Pie>
+                  <Tooltip wrapperStyle={{ outline: 'none' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={10} formatter={(value, entry: any) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>{value}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+        </div>
+      )}
 
       {/* ─── Recent Transactions ─── */}
       <div className="glass-card" style={{ overflow: 'hidden', margin: 0, padding: 0, border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>

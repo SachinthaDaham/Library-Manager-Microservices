@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import type { BorrowRecord } from '../types';
 import { BorrowModal } from './BorrowModal';
@@ -102,6 +102,30 @@ export const Dashboard = () => {
 
   const isPrivileged = user?.role === 'ADMIN' || user?.role === 'LIBRARIAN';
 
+  const barChartData = useMemo(() => {
+    const days: Record<string, number> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      days[d.toISOString().split('T')[0]] = 0;
+    }
+    borrows.forEach(b => {
+      const date = b.borrowDate.split('T')[0];
+      if (days[date] !== undefined) days[date]++;
+    });
+    return Object.keys(days).map(date => ({ 
+      date: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(date)), 
+      count: days[date] 
+    }));
+  }, [borrows]);
+
+  const pieChartData = useMemo(() => {
+    return [
+      { name: 'Active', value: stats.active, color: '#3B82F6' },
+      { name: 'Returned', value: stats.returned, color: '#10B981' },
+      { name: 'Overdue', value: stats.overdue, color: '#EF4444' }
+    ];
+  }, [stats]);
+
   return (
     <div style={{ paddingBottom: '3rem', animation: 'fadeIn 0.6s ease-out' }}>
       {/* ─── Premium Header ─── */}
@@ -179,18 +203,7 @@ export const Dashboard = () => {
             </h3>
             <div style={{ width: '100%', height: 250 }}>
               <ResponsiveContainer>
-                <BarChart data={(() => {
-                  const days: Record<string, number> = {};
-                  for(let i=6; i>=0; i--) {
-                     const d = new Date(); d.setDate(d.getDate() - i);
-                     days[d.toISOString().split('T')[0]] = 0;
-                  }
-                  borrows.forEach(b => {
-                     const date = b.borrowDate.split('T')[0];
-                     if (days[date] !== undefined) days[date]++;
-                  });
-                  return Object.keys(days).map(date => ({ date: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(date)), count: days[date] }));
-                })()}>
+                <BarChart data={barChartData}>
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
                   <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                   <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 6, 6]} barSize={32} animationDuration={1500} />
@@ -207,22 +220,14 @@ export const Dashboard = () => {
               <ResponsiveContainer>
                 <PieChart>
                   <Pie 
-                    data={[
-                      { name: 'Active', value: stats.active, color: '#3B82F6' },
-                      { name: 'Returned', value: stats.returned, color: '#10B981' },
-                      { name: 'Overdue', value: stats.overdue, color: '#EF4444' }
-                    ]} 
+                    data={pieChartData} 
                     cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value"
                     animationDuration={1500}
                   >
-                    {[
-                      { name: 'Active', value: stats.active, color: '#3B82F6' },
-                      { name: 'Returned', value: stats.returned, color: '#10B981' },
-                      { name: 'Overdue', value: stats.overdue, color: '#EF4444' }
-                    ].map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
+                    {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
                   </Pie>
                   <Tooltip wrapperStyle={{ outline: 'none' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={10} formatter={(value, entry: any) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>{value}</span>} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={10} formatter={(value) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>{value}</span>} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

@@ -1,6 +1,6 @@
-import type { BorrowRecord, CreateBorrowDto, ReturnBorrowDto, Book, Fine, Reservation, NotificationLog } from '../types';
+﻿import type { BorrowRecord, CreateBorrowDto, ReturnBorrowDto, Book, Fine, Reservation, NotificationLog } from '../types';
 
-const GATEWAY_URL = 'http://localhost:3000/api';
+const GATEWAY_URL = '/api';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('library_token');
@@ -258,3 +258,4 @@ export const api = {
     if (!res.ok) throw new Error('Failed to delete notification');
   },
 };
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Reservation, Book } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +64,7 @@ export function ReservationsList() {
       // Send a targeted notification to the specific user
       try {
         const bookTitle = bookMap[result.bookId] || 'a book';
-        await fetch('http://localhost:3000/api/notifications', {
+        await fetch('/api/notifications', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -120,7 +120,7 @@ export function ReservationsList() {
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
-      {/* ─── Header ─── */}
+      {/* â”€â”€â”€ Header â”€â”€â”€ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
         <div>
           <h1 className="dashboard-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -315,7 +315,7 @@ export function ReservationsList() {
                           onMouseDown={e => { e.preventDefault(); setMemberSearch(u.name); setTargetMemberId(u._id); setShowMemberDropdown(false); }}
                         >
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{u.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.email} · {u.role}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.email} Â· {u.role}</div>
                         </div>
                       ))}
                     </div>
@@ -336,3 +336,4 @@ export function ReservationsList() {
     </div>
   );
 }
+

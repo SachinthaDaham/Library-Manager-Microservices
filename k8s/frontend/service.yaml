@@ -1,4 +1,4 @@
-apiVersion: v1
+﻿apiVersion: v1
 kind: Service
 metadata:
   name: frontend
@@ -7,10 +7,11 @@ metadata:
     app: frontend
     component: ui
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
     targetPort: 80
     protocol: TCP
   selector:
     app: frontend
+

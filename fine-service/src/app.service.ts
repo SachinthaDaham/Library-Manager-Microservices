@@ -50,7 +50,7 @@ export class AppService {
     // Increment user penalty points in Auth Service
     try {
       if (data.memberId) {
-        await fetch(`http://localhost:3001/auth/users/${data.memberId}/penalty`, { method: 'POST' });
+        await fetch(`http://auth-service:3007/auth/users/${data.memberId}/penalty`, { method: 'POST' });
       }
     } catch (e) {
       console.error('Failed to add penalty point to user', e);
@@ -92,7 +92,7 @@ export class AppService {
     // Decrement user penalty points upon resolution
     try {
       if (fine.memberId) {
-        await fetch(`http://localhost:3001/auth/users/${fine.memberId}/penalty`, { method: 'DELETE' });
+        await fetch(`http://auth-service:3007/auth/users/${fine.memberId}/penalty`, { method: 'DELETE' });
       }
     } catch (e) {
       console.error('Failed to remove penalty point from user', e);

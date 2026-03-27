@@ -36,7 +36,7 @@ export class BorrowsService {
 
     // 2. Penalty Point check via Auth Service
     try {
-      const userRes = await firstValueFrom(this.httpService.get(`http://localhost:3001/auth/users/${memberId}/penalty-status`));
+      const userRes = await firstValueFrom(this.httpService.get(`http://auth-service:3007/auth/users/${memberId}/penalty-status`));
       const penaltyPoints = userRes.data.penaltyPoints;
       if (penaltyPoints >= 3) {
         throw new BadRequestException('Account restricted: You have reached the maximum penalty points (3). Please pay your outstanding fines to restore borrowing privileges.');
@@ -48,7 +48,7 @@ export class BorrowsService {
 
     // 3. Enterprise Reservation & Inventory Check
     try {
-      const bookRes = await firstValueFrom(this.httpService.get(`http://localhost:3002/books/${bookId}`));
+      const bookRes = await firstValueFrom(this.httpService.get(`http://book-service:3002/books/${bookId}`));
       const book = bookRes.data;
 
       if (book.availableCopies <= 0) {
@@ -56,13 +56,13 @@ export class BorrowsService {
       }
 
       // Check active fulfilled holds for this book
-      const holdsRes = await firstValueFrom(this.httpService.get(`http://localhost:3005/reservations/book/${bookId}/holds`));
+      const holdsRes = await firstValueFrom(this.httpService.get(`http://reservation-service:3005/reservations/book/${bookId}/holds`));
       const activeHolds = holdsRes.data || [];
       const userHasHold = activeHolds.some((h: any) => h.memberId === memberId);
 
       if (userHasHold) {
         // Automatically consume their hold ticket since they are checking it out
-        await firstValueFrom(this.httpService.delete(`http://localhost:3005/reservations/book/${bookId}/member/${memberId}/consume`));
+        await firstValueFrom(this.httpService.delete(`http://reservation-service:3005/reservations/book/${bookId}/member/${memberId}/consume`));
       } else {
         // They don't have a hold. Are there enough unreserved copies floating around?
         const totalReservedCopies = activeHolds.length;
@@ -72,7 +72,7 @@ export class BorrowsService {
       }
 
       // 4. Physically checkout the copy from Catalog
-      await firstValueFrom(this.httpService.put(`http://localhost:3002/books/${bookId}/availability`, { action: 'borrow' }));
+      await firstValueFrom(this.httpService.put(`http://book-service:3002/books/${bookId}/availability`, { action: 'borrow' }));
     } catch (e: any) {
       if (e instanceof BadRequestException) throw e;
       if (e?.response?.status === 404) throw new NotFoundException('Book not found in Catalog.');
@@ -136,7 +136,7 @@ export class BorrowsService {
 
     // Sync return with Book Service
     try {
-      await firstValueFrom(this.httpService.put(`http://localhost:3002/books/${record.bookId}/availability`, { action: 'return' }));
+      await firstValueFrom(this.httpService.put(`http://book-service:3002/books/${record.bookId}/availability`, { action: 'return' }));
     } catch (error: any) {
       console.error(`Failed to sync book return: ${error.message}`);
     }
@@ -159,7 +159,7 @@ export class BorrowsService {
         );
         
         await firstValueFrom(
-          this.httpService.post('http://localhost:3004/fines', {
+          this.httpService.post('http://fine-service:3004/fines', {
             memberId: record.memberId,
             borrowId: String(record._id),
             overdueDays,
@@ -190,7 +190,7 @@ export class BorrowsService {
 
     // Is there a waitlist?
     try {
-      const queueRes = await firstValueFrom(this.httpService.get(`http://localhost:3005/reservations/book/${record.bookId}/queue`));
+      const queueRes = await firstValueFrom(this.httpService.get(`http://reservation-service:3005/reservations/book/${record.bookId}/queue`));
       if (queueRes.data && queueRes.data.length > 0) {
         throw new BadRequestException('Renewal denied: Another member is currently waiting in the reserve queue for this item.');
       }

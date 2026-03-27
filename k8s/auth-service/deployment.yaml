@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/auth-service:d8a36d0c16945fd96cc75ce225f03e740eafdd17
+        image: ghcr.io/sachinthadaham/library-manager-microservices/auth-service:4a6858ef24cfa270615b11bead6f8fed696da25a
         imagePullPolicy: Always
         ports:
         - containerPort: 3007

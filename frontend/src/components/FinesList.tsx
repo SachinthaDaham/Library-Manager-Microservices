@@ -134,7 +134,7 @@ export function FinesList() {
               <thead>
                 <tr>
                   <th>Fine Info</th>
-                  {isPrivileged && <th>Member</th>}
+                  {/* Member column removed to save horizontal space. Stacked in Fine Info instead. */}
                   <th>Amount</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
@@ -149,14 +149,13 @@ export function FinesList() {
                       <td>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Late Return: {bookTitle}</div>
                         <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {f._id}</div>
+                        {isPrivileged && (
+                           <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Member: </span>
+                             <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--primary-light)' }}>{userMap[f.memberId] || 'User'}</span>
+                           </div>
+                        )}
                       </td>
-                      
-                      {isPrivileged && (
-                        <td>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userMap[f.memberId] || 'User'}</div>
-                          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{f.memberId.substring(0, 8)}...</div>
-                        </td>
-                      )}
 
                       <td>
                         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: f.paid ? 'var(--status-returned)' : 'var(--status-overdue)' }}>

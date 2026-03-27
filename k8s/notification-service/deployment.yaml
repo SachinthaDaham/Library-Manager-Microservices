@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: ghcr.io/sachinthadaham/library-manager-microservices/notification-service:84c04cd886e6b99ed8502311ffcaae2a3c3b9f9a
+        image: ghcr.io/sachinthadaham/library-manager-microservices/notification-service:08e3b3371f4be815e45daab8f86a0461efbcd43b
         imagePullPolicy: Always
         ports:
         - containerPort: 3006

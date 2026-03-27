@@ -17,6 +17,8 @@ export interface Book {
   genre: string;
   totalCopies: number;
   availableCopies: number;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface Fine {

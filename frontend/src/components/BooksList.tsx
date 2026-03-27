@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import type { Book } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock } from 'lucide-react';
+import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock, Star } from 'lucide-react';
 
 export function BooksList() {
   const { user } = useAuth();
@@ -12,6 +12,9 @@ export function BooksList() {
   const [newBook, setNewBook] = useState({ title: '', author: '', genre: '', isbn: '', totalCopies: 5 });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('');
+  
+  const [showReviewModal, setShowReviewModal] = useState<Book | null>(null);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -71,6 +74,18 @@ export function BooksList() {
     const genres = new Set(books.map(b => b.genre).filter(Boolean));
     return Array.from(genres);
   }, [books]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return alert('Please sign in to leave a review.');
+    try {
+      await api.addBookReview(showReviewModal!._id, { memberId: user.id, ...reviewForm });
+      alert('Review submitted successfully!');
+      setShowReviewModal(null);
+      setReviewForm({ rating: 5, comment: '' });
+      fetchBooks();
+    } catch (e: any) { alert(e.message); }
+  };
 
   return (
     <div style={{ paddingBottom: '2rem' }}>
@@ -176,8 +191,25 @@ export function BooksList() {
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.4rem', lineHeight: 1.3 }}>
                     {book.title}
                   </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.2rem', fontWeight: 500 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 500 }}>
                     <User size={14} style={{ marginRight: '6px' }} /> {book.author}
+                  </div>
+
+                  {/* Rating UI */}
+                  <div 
+                    style={{ display: 'flex', alignItems: 'center', gap: '2px', marginBottom: '1.2rem', cursor: 'pointer', opacity: 0.9, transition: 'opacity 0.2s' }} 
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.9'}
+                    onClick={() => setShowReviewModal(book)}
+                    title="Click to read or write reviews"
+                  >
+                    {[1, 2, 3, 4, 5].map(star => {
+                        const isFilled = book.averageRating ? star <= Math.round(book.averageRating) : false;
+                        return <Star key={star} size={14} fill={isFilled ? '#FBBF24' : 'transparent'} color={isFilled ? '#FBBF24' : '#CBD5E1'} />;
+                    })}
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 600 }}>
+                      {book.averageRating ? book.averageRating.toFixed(1) : 'New'} ({book.reviewCount || 0})
+                    </span>
                   </div>
 
                   <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -255,6 +287,60 @@ export function BooksList() {
                 <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px' }} onClick={() => setShowAddModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px' }}>
                   <Plus size={18} /> Save Draft
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="modal-overlay" onClick={() => setShowReviewModal(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+              <Star size={24} color="#FBBF24" fill="#FBBF24" style={{ marginRight: '12px' }} />
+              <div>
+                <h2 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--text-primary)' }}>Review {showReviewModal.title}</h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, marginTop: '4px' }}>Share your thoughts on this book</p>
+              </div>
+            </div>
+            
+            <form onSubmit={handleSubmitReview}>
+              <div className="form-group" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <label style={{ display: 'block', marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>Your Rating</label>
+                <div style={{ display: 'inline-flex', gap: '8px' }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star 
+                      key={star} 
+                      size={36} 
+                      style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      fill={star <= reviewForm.rating ? '#FBBF24' : 'transparent'} 
+                      color={star <= reviewForm.rating ? '#FBBF24' : '#CBD5E1'} 
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label>Written Review (Optional)</label>
+                <textarea 
+                  className="form-control" 
+                  rows={4} 
+                  value={reviewForm.comment} 
+                  onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} 
+                  placeholder="What did you like or dislike about this book?" 
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px' }} onClick={() => setShowReviewModal(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px', background: '#FBBF24', color: '#fff', border: 'none' }}>
+                  Submit Rating
                 </button>
               </div>
             </form>

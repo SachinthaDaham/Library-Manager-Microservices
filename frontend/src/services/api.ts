@@ -1,4 +1,4 @@
-﻿import type { BorrowRecord, CreateBorrowDto, ReturnBorrowDto, Book, Fine, Reservation, NotificationLog } from '../types';
+import type { BorrowRecord, CreateBorrowDto, ReturnBorrowDto, Book, Fine, Reservation, NotificationLog } from '../types';
 
 const GATEWAY_URL = '/api';
 
@@ -133,6 +133,21 @@ export const api = {
     if (!res.ok) throw new Error('Failed to create book');
     const result = await res.json();
     logActivity(`A new book "${data.title}" was added to the library catalog.`, 'SUCCESS', { bookId: result._id });
+    return result;
+  },
+
+  async addBookReview(id: string, data: { memberId: string, rating: number, comment?: string }): Promise<Book> {
+    const res = await fetch(`${GATEWAY_URL}/books/${id}/reviews`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to submit review');
+    }
+    const result = await res.json();
+    logActivity(`A ${data.rating}-star review was submitted for "${result.title}".`, 'INFO', { bookId: id });
     return result;
   },
 

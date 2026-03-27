@@ -77,4 +77,25 @@ export class BooksService {
     
     return book.save();
   }
+
+  async addReview(id: string, memberId: string, rating: number, comment?: string): Promise<Book> {
+    const book = await this.bookModel.findById(id);
+    if (!book) throw new NotFoundException('Book not found');
+
+    const existingReviewIndex = book.reviews.findIndex(r => r.memberId === memberId);
+    
+    if (existingReviewIndex >= 0) {
+       book.reviews[existingReviewIndex].rating = rating;
+       if (comment !== undefined) book.reviews[existingReviewIndex].comment = comment;
+       book.reviews[existingReviewIndex].createdAt = new Date();
+    } else {
+       book.reviews.push({ memberId, rating, comment, createdAt: new Date() } as any);
+    }
+    
+    book.reviewCount = book.reviews.length;
+    const totalScore = book.reviews.reduce((acc, rev) => acc + rev.rating, 0);
+    book.averageRating = parseFloat((totalScore / book.reviewCount).toFixed(1));
+
+    return book.save();
+  }
 }

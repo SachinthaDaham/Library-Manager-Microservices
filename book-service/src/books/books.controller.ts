@@ -55,4 +55,15 @@ export class BooksController {
     }
     return this.booksService.updateAvailability(id, body.action);
   }
+
+  @Post(':id/reviews')
+  @ApiOperation({ summary: 'Add a rating and review for a book' })
+  async addReview(
+    @Param('id') id: string, 
+    @Body() body: { memberId: string, rating: number, comment?: string }
+  ) {
+    if (!body.memberId || !body.rating) throw new BadRequestException('memberId and rating are required');
+    if (body.rating < 1 || body.rating > 5) throw new BadRequestException('Rating must be between 1 and 5');
+    return this.booksService.addReview(id, body.memberId, body.rating, body.comment);
+  }
 }

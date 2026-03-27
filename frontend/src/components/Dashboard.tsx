@@ -4,15 +4,14 @@ import type { BorrowRecord } from '../types';
 import { BorrowModal } from './BorrowModal';
 import { ReturnModal } from './ReturnModal';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Activity, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw, Calendar, Clock, ChevronRight, Inbox, Download, ChevronDown, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BookOpen, Activity, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw, Calendar, Clock, ChevronRight, ChevronLeft, Inbox, Download, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ total: 0, active: 0, returned: 0, overdue: 0 });
   const [borrows, setBorrows] = useState<BorrowRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showBorrowModal, setShowBorrowModal] = useState(false);
@@ -21,10 +20,11 @@ export const Dashboard = () => {
   const [bookMap, setBookMap] = useState<Record<string, string>>({});
   const [myPenaltyPoints, setMyPenaltyPoints] = useState<number>(0);
   const [showCSVPreview, setShowCSVPreview] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'ALL'|'ACTIVE'|'OVERDUE'|'RETURNED'>('ALL');
 
-  const loadData = async (pageNum = 1, isLoadMore = false) => {
-    if (isLoadMore) setLoadingMore(true);
-    else setLoading(true);
+  const loadData = async (pageNum = 1) => {
+    setLoading(true);
+
 
     try {
       const [statsData, borrowsRes, usersData, booksData] = await Promise.all([
@@ -50,25 +50,22 @@ export const Dashboard = () => {
 
       const sorted = filteredBorrows.sort((a: any, b: any) => new Date(b.borrowDate).getTime() - new Date(a.borrowDate).getTime());
       
-      if (isLoadMore) setBorrows(prev => [...prev, ...sorted]);
-      else setBorrows(sorted);
+      setBorrows(sorted);
 
       setStats(statsData);
       setPage(pageNum);
-    } catch (err) { console.error('Dashboard Data Error:', err); }
-    finally {
+    } catch (err) {
+      console.error('Dashboard Data Error:', err);
+    } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   };
+
 
   useEffect(() => { loadData(); }, []);
 
-  const handleLoadMore = () => {
-    if (page < totalPages) {
-      loadData(page + 1, true);
-    }
-  };
+  const handlePrevPage = () => { if (page > 1) loadData(page - 1); };
+  const handleNextPage = () => { if (page < totalPages) loadData(page + 1); };
 
   const exportCSV = () => {
     const headers = ['Borrow ID', 'Member', 'Book', 'Borrow Date', 'Due Date', 'Status'];
@@ -236,8 +233,24 @@ export const Dashboard = () => {
         </div>
       )}
 
-      {/* ─── Recent Transactions ─── */}
-      <div className="glass-card" style={{ overflow: 'hidden', margin: 0, padding: 0, border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
+      {/* ─── Borrow Records Table ─── */}
+      <div className="glass-card" style={{ padding: 0, overflow: 'hidden', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+        {/* Table Toolbar */}
+        <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {(['ALL','ACTIVE','OVERDUE','RETURNED'] as const).map(f => (
+              <button key={f}
+                className={`btn ${statusFilter === f ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '0.35rem 1rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: 'var(--radius-pill)', background: statusFilter === f ? '' : '#f8fafc' }}
+                onClick={() => setStatusFilter(f)}>
+                {f === 'ALL' ? `All` : f.charAt(0) + f.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-outline" onClick={() => setShowCSVPreview(true)} style={{ padding: '0.4rem 1.1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
         <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}>
           <div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -246,9 +259,6 @@ export const Dashboard = () => {
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Displaying {borrows.length} architectural events</p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-outline" onClick={() => setShowCSVPreview(true)} title="Export CSV Report" style={{ padding: '8px 12px', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)', background: 'rgba(16,185,129,0.05)', color: 'var(--status-returned)' }}>
-              <Download size={14} /> 
-            </button>
             <button className="btn btn-outline" onClick={() => loadData(1)} style={{ padding: '8px 16px', fontSize: '0.85rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border)' }}>
               <RefreshCw size={14} style={{ marginRight: '6px' }} /> Sync Details
             </button>
@@ -286,7 +296,9 @@ export const Dashboard = () => {
                   </td>
                 </tr>
               ) : (
-                borrows.map(r => (
+                borrows
+                  .filter(r => statusFilter === 'ALL' || r.status === statusFilter)
+                  .map(r => (
                   <tr key={r._id} style={{ background: '#fff', transition: 'background 0.2s', borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '1rem 2rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -340,7 +352,7 @@ export const Dashboard = () => {
                               try {
                                 await api.renewBorrow(r._id);
                                 alert('Success! Your loan has been extended by 7 days.');
-                                loadData(page, true);
+                                loadData(page);
                               } catch(e: any) { alert(e.message); }
                             }}
                           >
@@ -356,19 +368,21 @@ export const Dashboard = () => {
               )}
             </tbody>
           </table>
-          
+
           {/* Pagination Footer */}
-          {!loading && page < totalPages && (
-            <div style={{ padding: '1.5rem', textAlign: 'center', borderTop: '1px solid var(--border)', background: '#fff' }}>
-              <button 
-                className="btn btn-outline" 
-                onClick={handleLoadMore} 
-                disabled={loadingMore}
-                style={{ padding: '10px 24px', borderRadius: 'var(--radius-pill)', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-              >
-                {loadingMore ? <RefreshCw size={16} className="spin" /> : <ChevronDown size={16} />}
-                Load More Records
-              </button>
+          {!loading && totalPages > 1 && (
+            <div style={{ padding: '1rem 2rem', borderTop: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Page {page} of {totalPages}</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn btn-outline" onClick={handlePrevPage} disabled={page <= 1}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', opacity: page <= 1 ? 0.4 : 1 }}>
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <button className="btn btn-primary" onClick={handleNextPage} disabled={page >= totalPages}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', opacity: page >= totalPages ? 0.4 : 1 }}>
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           )}
         </div>

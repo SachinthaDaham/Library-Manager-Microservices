@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { CreateBorrowDto } from '../types';
 
-interface BorrowModalProps { onClose: () => void; onSuccess: () => void; }
+interface BorrowModalProps { onClose: () => void; onSuccess: () => void; prefilledBookId?: string; prefilledBookTitle?: string; }
 
-export const BorrowModal = ({ onClose, onSuccess }: BorrowModalProps) => {
-  const [formData, setFormData] = useState<CreateBorrowDto>({ memberId: '', bookId: '', loanDurationDays: 14, notes: '' });
+export const BorrowModal = ({ onClose, onSuccess, prefilledBookId, prefilledBookTitle }: BorrowModalProps) => {
+  const [formData, setFormData] = useState<CreateBorrowDto>({ memberId: '', bookId: prefilledBookId || '', loanDurationDays: 14, notes: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<any[]>([]);
@@ -55,9 +55,10 @@ export const BorrowModal = ({ onClose, onSuccess }: BorrowModalProps) => {
               </div>
             )}
           </div>
-          <div className="form-group" style={{ position: 'relative' }}>
-            <label>Search Book Title or ID</label>
-            <input className="form-control" placeholder="Type to search..." value={bookSearch} onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); setFormData({...formData, bookId: ''}); }} onFocus={() => setShowBookDropdown(true)} onBlur={() => setTimeout(() => setShowBookDropdown(false), 200)} />
+          {!prefilledBookId && (
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label>Search Book Title or ID</label>
+              <input className="form-control" placeholder="Type to search..." value={bookSearch} onChange={e => { setBookSearch(e.target.value); setShowBookDropdown(true); setFormData({...formData, bookId: ''}); }} onFocus={() => setShowBookDropdown(true)} onBlur={() => setTimeout(() => setShowBookDropdown(false), 200)} />
             {showBookDropdown && filteredBooks.length > 0 && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', zIndex: 10, maxHeight: 150, overflowY: 'auto', borderRadius: 'var(--radius-sm)' }}>
                 {filteredBooks.map(b => (
@@ -68,7 +69,14 @@ export const BorrowModal = ({ onClose, onSuccess }: BorrowModalProps) => {
                 ))}
               </div>
             )}
-          </div>
+            </div>
+          )}
+          {prefilledBookId && (
+            <div className="form-group">
+              <label>Selected Book</label>
+              <input className="form-control" value={prefilledBookTitle || prefilledBookId} disabled style={{ background: 'var(--bg-base)', opacity: 0.8 }} />
+            </div>
+          )}
           <div className="form-group"><label>Loan Duration (Days)</label><input type="number" className="form-control" min={1} max={90} value={formData.loanDurationDays} onChange={e => setFormData({...formData, loanDurationDays: parseInt(e.target.value)})} /></div>
           <div className="form-group"><label>Notes (Optional)</label><textarea className="form-control" rows={3} value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Any special notes..." /></div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

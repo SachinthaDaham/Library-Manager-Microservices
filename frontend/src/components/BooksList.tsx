@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import type { Book } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock, Star, TrendingUp } from 'lucide-react';
+import { BorrowModal } from './BorrowModal';
 
 export function BooksList() {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export function BooksList() {
   
   const [showReviewModal, setShowReviewModal] = useState<Book | null>(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [adminCheckoutBook, setAdminCheckoutBook] = useState<Book | null>(null);
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -53,10 +55,18 @@ export function BooksList() {
     } catch(e: any) { alert(e.message); }
   };
 
-  const handleBorrow = async (id: string) => {
-    if (!user) return alert('🔒 Guest Access Restricted\\n\\nPlease Sign In or Create an Account to checkout library materials.');
+  const handleBorrow = async (book: Book) => {
+    if (!user) return alert('🔒 Guest Access Restricted\n\nPlease Sign In or Create an Account to checkout library materials.');
+    
+    // Admins issuing a book physically to a user at the desk
+    if (user.role === 'ADMIN' || user.role === 'LIBRARIAN') {
+      setAdminCheckoutBook(book);
+      return;
+    }
+
+    // Members checking out to themselves digitally
     try {
-      await api.createBorrow({ memberId: user.id, bookId: id, loanDurationDays: 14 });
+      await api.createBorrow({ memberId: user.id, bookId: book._id, loanDurationDays: 14 });
       alert('Borrowed successfully!');
       fetchBooks();
     } catch(e: any) { alert(e.message); }
@@ -267,7 +277,7 @@ export function BooksList() {
                     <button 
                       className={`btn ${isAvail ? 'btn-primary' : 'btn-outline'}`} 
                       style={{ flex: 1, padding: '12px', fontSize: '0.9rem', color: isAvail ? '' : 'var(--text-primary)', border: isAvail ? 'none' : '1px solid var(--border)', background: isAvail ? '' : '#f8f9fa' }}
-                      onClick={() => isAvail ? handleBorrow(book._id) : handleReserve(book._id)}
+                      onClick={() => isAvail ? handleBorrow(book) : handleReserve(book._id)}
                     >
                       {isAvail ? <><BookOpen size={16} /> Checkout Book</> : <><Clock size={16} /> Join Waitlist</>}
                     </button>
@@ -389,6 +399,16 @@ export function BooksList() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Admin Quick Checkout Modal */}
+      {adminCheckoutBook && (
+        <BorrowModal 
+          prefilledBookId={adminCheckoutBook._id}
+          prefilledBookTitle={adminCheckoutBook.title}
+          onClose={() => setAdminCheckoutBook(null)}
+          onSuccess={() => { setAdminCheckoutBook(null); fetchBooks(); }}
+        />
       )}
     </div>
   );

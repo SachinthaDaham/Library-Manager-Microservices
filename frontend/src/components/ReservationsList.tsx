@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Reservation, Book } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -55,6 +55,16 @@ export function ReservationsList() {
       await api.cancelReservation(id);
       fetchRes();
     } catch (e: any) { alert(e.message); }
+  };
+
+  const handleAcceptPickup = async (r: Reservation, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!user) return;
+    try {
+      await api.createBorrow({ memberId: r.memberId, bookId: r.bookId, loanDurationDays: 14 });
+      alert('Success! You have officially checked out this book. The 14-day loan period has begun.');
+      fetchRes();
+    } catch (err: any) { alert(err.message); }
   };
 
   const handleFulfill = async (id: string, e?: React.MouseEvent) => {
@@ -229,7 +239,16 @@ export function ReservationsList() {
                         <CheckCircle size={16} /> Fulfill
                       </button>
                     )}
-                    {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN' || r.memberId === user?.id) && (
+                    {isFulfilled && user?.id === r.memberId && (
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ flex: 1, gap: '6px', fontSize: '0.85rem' }}
+                        onClick={(e) => handleAcceptPickup(r, e)}
+                      >
+                        <BookOpen size={16} /> Check Out Now
+                      </button>
+                    )}
+                    {(user?.role === 'ADMIN' || user?.role === 'LIBRARIAN' || (!isFulfilled && r.memberId === user?.id)) && (
                       <button 
                         className="btn btn-outline" 
                         style={{ flex: 1, color: 'var(--text-secondary)' }}

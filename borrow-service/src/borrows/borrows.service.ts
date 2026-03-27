@@ -235,7 +235,22 @@ export class BorrowsService {
         record.status = BorrowStatus.OVERDUE;
         await record.save();
 
-        const payload = { borrowId: record._id, bookId: record.bookId, memberId: record.memberId, dueDate: record.dueDate.toISOString(), timestamp: new Date().toISOString() };
+        let bookTitle = record.bookId;
+        try {
+          const bookRes = await firstValueFrom(this.httpService.get(`http://book-service:3002/books/${record.bookId}`));
+          if (bookRes.data?.title) bookTitle = bookRes.data.title;
+        } catch (e) {
+          console.error(`Failed to fetch book title for overdue log: ${e.message}`);
+        }
+
+        const payload = { 
+          borrowId: record._id, 
+          bookId: record.bookId, 
+          bookTitle,
+          memberId: record.memberId, 
+          dueDate: record.dueDate.toISOString(), 
+          timestamp: new Date().toISOString() 
+        };
         this.fineClient.emit('book.overdue', payload);
         this.notificationClient.emit('book.overdue', payload);
     }

@@ -248,6 +248,12 @@ export function BooksList() {
                     </span>
                   </div>
 
+                  {book.description && (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.2rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {book.description}
+                    </p>
+                  )}
+
                   <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', background: 'var(--bg-base)', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border)' }}>
                       <Hash size={12} style={{ marginRight: '4px', opacity: 0.6 }} /> {book.genre}

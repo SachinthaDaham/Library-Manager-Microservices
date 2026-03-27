@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import type { Book } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock, Star } from 'lucide-react';
+import { Search, Plus, BookOpen, Hash, User, Trash2, Library, Filter, Clock, Star, TrendingUp } from 'lucide-react';
 
 export function BooksList() {
   const { user } = useAuth();
@@ -74,6 +74,14 @@ export function BooksList() {
     const genres = new Set(books.map(b => b.genre).filter(Boolean));
     return Array.from(genres);
   }, [books]);
+
+  const trendingBooks = useMemo(() => {
+    if (searchQuery || selectedGenre) return []; // Hide trending when filtering
+    return [...books]
+      .sort((a, b) => (b.totalCopies - b.availableCopies) - (a.totalCopies - a.availableCopies))
+      .filter(b => (b.totalCopies - b.availableCopies) > 0)
+      .slice(0, 3);
+  }, [books, searchQuery, selectedGenre]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +163,35 @@ export function BooksList() {
           <p style={{ fontSize: '1rem' }}>Try adjusting your search terms or filters.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+        <>
+          {trendingBooks.length > 0 && (
+            <div style={{ marginBottom: '3rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={20} color="var(--primary)" /> Trending Now
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                {trendingBooks.map(book => (
+                  <div key={`trend-${book._id}`} className="glass-card stat-card-hover" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.2rem', margin: 0, border: '1px solid rgba(67, 97, 238, 0.15)', background: 'linear-gradient(145deg, #ffffff, #f8faff)' }}>
+                    <div style={{ width: '48px', height: '64px', background: 'var(--primary-light)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
+                      🔥
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h4>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{book.author}</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
+                        {book.totalCopies - book.availableCopies} checkouts this week
+                      </div>
+                    </div>
+                    <button className="btn btn-outline" style={{ padding: '8px', borderRadius: '50%' }} onClick={() => setShowReviewModal(book)} title="Quick View & Reviews">
+                      <Star size={16} color="var(--primary)" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
           {books.map(book => {
             const isAvail = book.availableCopies > 0;
             return (
@@ -244,7 +280,8 @@ export function BooksList() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Add Modal */}
